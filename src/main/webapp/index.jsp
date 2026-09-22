@@ -49,9 +49,9 @@
                     <%-- TODO: fill these options from RoomTypeDAO --%>
                     <select class="form-select" id="roomType" name="roomType">
                         <option value="">Any type</option>
-                        <option value="1">Standard</option>
-                        <option value="2">Deluxe</option>
-                        <option value="3">Suite</option>
+                        <option value="1">Pool View</option>
+                        <option value="2">City View</option>
+                        <option value="3">Family Suite</option>
                     </select>
                 </div>
                 <div class="col-12 col-lg-auto d-grid">

@@ -15,7 +15,7 @@
                 <ul class="nav justify-content-md-end small">
                     <li class="nav-item"><a class="nav-link px-2" href="${ctx}/rooms">Rooms</a></li>
                     <li class="nav-item"><a class="nav-link px-2" href="${ctx}/Customer/login.jsp">Log in</a></li>
-                    <li class="nav-item"><a class="nav-link px-2" href="${ctx}/Customer/login.jsp">Create account</a></li>
+                    <li class="nav-item"><a class="nav-link px-2" href="${ctx}/Customer/register.jsp">Create account</a></li>
                 </ul>
             </div>
         </div>
