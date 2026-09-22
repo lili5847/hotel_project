@@ -23,7 +23,7 @@
                 <div class="col-lg-7 p-4 p-md-5">
                     <h1 class="h3 mb-1">Log in</h1>
                     <p class="text-body-secondary mb-4">
-                        New here? <a href="${ctx}/register">Create an account</a>
+                        New here? <a href="${ctx}/Customer/register.jsp">Create an account</a>
                     </p>
 
                     <%-- ============================================================

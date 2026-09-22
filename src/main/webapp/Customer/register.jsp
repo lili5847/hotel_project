@@ -22,7 +22,7 @@
                 <div class="col-lg-7 p-4 p-md-5">
                     <h1 class="h3 mb-1">Create your account</h1>
                     <p class="text-body-secondary mb-4">
-                        Already registered? <a href="${ctx}/login">Log in</a>
+                        Already registered? <a href="${ctx}/Customer/login.jsp">Log in</a>
                     </p>
 
                     <%-- ============================================================
