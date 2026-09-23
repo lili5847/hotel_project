@@ -24,7 +24,7 @@
     <jsp:useBean id="demoReservations" class="java.util.ArrayList" scope="request" />
     <c:set var="demo1" value='{"id":101,"roomName":"Deluxe King Room","typeLabel":"City view","img":"room-1.jpg","checkIn":"2026-10-14","checkOut":"2026-10-17","nights":3,"guests":2,"total":195,"status":"CONFIRMED","canCancel":true}' />
     <%-- BACKEND: demo objects are plain maps just for preview; delete this whole c:if once real data flows in --%>
-    <c:set var="reservations" value="${['x']}" scope="request" />
+    <c:set var="reservations" value="" scope="request" />
 </c:if>
 
 <jsp:include page="/common/header.jsp">
