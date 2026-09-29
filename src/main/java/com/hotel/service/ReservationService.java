@@ -1,11 +1,13 @@
 package com.hotel.service;
 
+import com.hotel.dto.ReservationRequest;
 import com.hotel.model.Customer;
 import com.hotel.model.Reservation;
 import com.hotel.model.Room;
 import com.hotel.repository.CustomerRepository;
 import com.hotel.repository.ReservationRepository;
 import com.hotel.repository.RoomRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +30,7 @@ public class ReservationService {
 
     // ១. បង្កើតការកក់បន្ទប់ (Create Booking)
     @Transactional
-    public Reservation createReservation(Integer customerId, Integer roomId, LocalDate checkIn, LocalDate checkOut, Integer guests) {
+    public Reservation createReservation(LocalDate checkIn, LocalDate checkOut, Integer roomId, Integer customerId, Integer guests) {
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new IllegalArgumentException("រកមិនឃើញព័ត៌មានអតិថិជនឡើយ!"));
 
@@ -82,5 +84,13 @@ public class ReservationService {
         }
 
         reservationRepository.save(reservation);
+    }
+
+    public List<Reservation> getReservationsByUserId(Long userId) {
+        return null;
+    }
+
+    public Reservation createReservation(@Valid ReservationRequest request) {
+        return null;
     }
 }

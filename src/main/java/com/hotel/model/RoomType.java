@@ -1,6 +1,8 @@
 package com.hotel.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "ROOM_TYPES")
@@ -11,7 +13,7 @@ public class RoomType {
     @Column(name = "room_type_id")
     private Integer roomTypeId;
 
-    @Column(name = "type_name")
+    @Column(name = "type_name", nullable = false)
     private String typeName;
 
     @Column(name = "description")
@@ -25,6 +27,10 @@ public class RoomType {
 
     @Column(name = "amenities")
     private String amenities;
+
+    @OneToMany(mappedBy = "roomType", cascade = CascadeType.ALL)
+    @JsonIgnore // ការពារ Infinite Recursion/Loop ពេល Convert ទៅជា JSON
+    private List<Room> rooms;
 
     public RoomType() {}
 
@@ -46,4 +52,7 @@ public class RoomType {
 
     public String getAmenities() { return amenities; }
     public void setAmenities(String amenities) { this.amenities = amenities; }
+
+    public List<Room> getRooms() { return rooms; }
+    public void setRooms(List<Room> rooms) { this.rooms = rooms; }
 }

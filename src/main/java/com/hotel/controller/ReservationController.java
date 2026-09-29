@@ -58,7 +58,7 @@ public class ReservationController {
         }
 
         // ស្វែងរក Customer ID ដែលត្រូវគ្នានឹង User
-        Optional<Customer> customerOpt = customerRepository.findByUserUserId(loggedInUser.getUserId());
+        Optional<Customer> customerOpt = customerRepository.findByUserUserId(Math.toIntExact(loggedInUser.getUserId()));
         if (customerOpt.isEmpty()) {
             model.addAttribute("error", "មិនទាន់មានព័ត៌មាន Profile អតិថិជនឡើយ!");
             return "Customer/booking.jsp";
@@ -66,12 +66,7 @@ public class ReservationController {
 
         try {
             Reservation reservation = reservationService.createReservation(
-                    customerOpt.get().getCustId(),
-                    roomId,
-                    checkIn,
-                    checkOut,
-                    guests
-            );
+                    checkIn, checkOut, roomId, roomId, guests);
             return "redirect:/reservations/my-bookings";
         } catch (IllegalArgumentException e) {
             model.addAttribute("error", e.getMessage());
@@ -87,7 +82,7 @@ public class ReservationController {
             return "redirect:/login";
         }
 
-        Optional<Customer> customerOpt = customerRepository.findByUserUserId(loggedInUser.getUserId());
+        Optional<Customer> customerOpt = customerRepository.findByUserUserId(Math.toIntExact(loggedInUser.getUserId()));
         if (customerOpt.isPresent()) {
             List<Reservation> reservations = reservationService.getReservationsByCustomer(customerOpt.get().getCustId());
             model.addAttribute("reservations", reservations);

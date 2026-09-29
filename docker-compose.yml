@@ -1,9 +1,10 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   mysqldb:
     image: mysql:8.0
     container_name: mysql_hotel_db
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: "2005"
       MYSQL_DATABASE: hotel_db
@@ -11,18 +12,26 @@ services:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  app:
+  backend:
     build: .
     container_name: spring_hotel_app
+    restart: always
     ports:
       - "8080:8080"
     depends_on:
-      - mysqldb
+      mysqldb:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/hotel_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3307/hotel_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: "2005"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
 volumes:
   db_data:

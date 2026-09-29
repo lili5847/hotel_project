@@ -1,5 +1,6 @@
 package com.hotel.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
@@ -11,11 +12,12 @@ public class Room {
     @Column(name = "room_id")
     private Integer roomId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY) // 👈 ប្រើ LAZY Fetch ដើម្បីកុំឱ្យ Performance ធ្លាក់ (Load ទិន្នន័យតែពេលត្រូវការ)
     @JoinColumn(name = "room_type_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "rooms"}) // 👈 ការពារ Error ពេល Serialize LAZY Object ទៅជា JSON
     private RoomType roomType;
 
-    @Column(name = "room_number")
+    @Column(name = "room_number", nullable = false)
     private String roomNumber;
 
     @Column(name = "floor")

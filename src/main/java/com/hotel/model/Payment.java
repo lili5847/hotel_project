@@ -13,7 +13,7 @@ public class Payment {
     private Integer paymentId;
 
     @ManyToOne
-    @JoinColumn(name = "reservation_id")
+    @JoinColumn(name = "booking_id") // ✅ ប្តូរមក booking_id ឱ្យត្រូវតាម Reservation Entity
     private Reservation reservation;
 
     @Column(name = "amount")
@@ -54,4 +54,8 @@ public class Payment {
 
     public LocalDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+
+    // ✅ Helper Getters/Setters សម្រាប់ដោះស្រាយ Method setPaymentDate ក្នុង PaymentService
+    public LocalDateTime getPaymentDate() { return paidAt; }
+    public void setPaymentDate(LocalDateTime paymentDate) { this.paidAt = paymentDate; }
 }
