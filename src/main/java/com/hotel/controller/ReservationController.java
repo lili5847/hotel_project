@@ -1,12 +1,15 @@
 package com.hotel.controller;
 
+import com.hotel.dto.ReservationRequest;
 import com.hotel.model.Customer;
 import com.hotel.model.Reservation;
 import com.hotel.model.User;
 import com.hotel.repository.CustomerRepository;
 import com.hotel.repository.RoomRepository;
 import com.hotel.service.ReservationService;
+
 import jakarta.servlet.http.HttpSession;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -30,71 +33,222 @@ public class ReservationController {
     @Autowired
     private RoomRepository roomRepository;
 
-    // ១. បង្ហាញ Form កក់បន្ទប់ (GET Request)
+
+    // =====================================================
+    // 1. SHOW BOOKING FORM
+    // GET /reservations/book?roomId=1
+    // =====================================================
+
     @GetMapping("/book")
-    public String showBookingForm(@RequestParam("roomId") Integer roomId, Model model, HttpSession session) {
-        User loggedInUser = (User) session.getAttribute("user");
+    public String showBookingForm(
+            @RequestParam("roomId") Integer roomId,
+            Model model,
+            HttpSession session) {
+
+        User loggedInUser =
+                (User) session.getAttribute("user");
+
         if (loggedInUser == null) {
-            return "redirect:/login"; // តម្រូវឱ្យ Login ជាមុនសិន
+            return "redirect:/login";
         }
 
-        model.addAttribute("room", roomRepository.findById(roomId).orElse(null));
+        model.addAttribute(
+                "room",
+                roomRepository.findById(roomId).orElse(null)
+        );
+
         return "Customer/booking.jsp";
     }
 
-    // ២. ទទួលទិន្នន័យកក់បន្ទប់ (POST Request)
+
+    // =====================================================
+    // 2. PROCESS BOOKING
+    // POST /reservations/book
+    // =====================================================
+
     @PostMapping("/book")
     public String processBooking(
             @RequestParam("roomId") Integer roomId,
-            @RequestParam("checkIn") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
-            @RequestParam("checkOut") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
-            @RequestParam("guests") Integer guests,
+
+            @RequestParam("checkIn")
+            @DateTimeFormat(
+                    iso = DateTimeFormat.ISO.DATE
+            )
+            LocalDate checkIn,
+
+            @RequestParam("checkOut")
+            @DateTimeFormat(
+                    iso = DateTimeFormat.ISO.DATE
+            )
+            LocalDate checkOut,
+
+            @RequestParam(
+                    value = "guests",
+                    required = false,
+                    defaultValue = "1"
+            )
+            Integer guests,
+
             HttpSession session,
             Model model) {
 
-        User loggedInUser = (User) session.getAttribute("user");
+        // -------------------------------------------------
+        // Check Login
+        // -------------------------------------------------
+
+        User loggedInUser =
+                (User) session.getAttribute("user");
+
         if (loggedInUser == null) {
             return "redirect:/login";
         }
 
-        // ស្វែងរក Customer ID ដែលត្រូវគ្នានឹង User
-        Optional<Customer> customerOpt = customerRepository.findByUserUserId(Math.toIntExact(loggedInUser.getUserId()));
+
+        // -------------------------------------------------
+        // Find Customer
+        // -------------------------------------------------
+
+        Optional<Customer> customerOpt =
+                customerRepository.findByUserUserId(
+                        Math.toIntExact(
+                                loggedInUser.getUserId()
+                        )
+                );
+
         if (customerOpt.isEmpty()) {
-            model.addAttribute("error", "មិនទាន់មានព័ត៌មាន Profile អតិថិជនឡើយ!");
+
+            model.addAttribute(
+                    "error",
+                    "មិនទាន់មានព័ត៌មាន Profile អតិថិជនឡើយ!"
+            );
+
+            model.addAttribute(
+                    "room",
+                    roomRepository.findById(roomId).orElse(null)
+            );
+
             return "Customer/booking.jsp";
         }
 
+
+        // -------------------------------------------------
+        // Create Reservation Request
+        // -------------------------------------------------
+
+        ReservationRequest request =
+                new ReservationRequest();
+
+        request.setUserId(
+                Math.toIntExact(
+                        loggedInUser.getUserId()
+                )
+        );
+
+        request.setRoomId(roomId);
+
+        request.setCheckInDate(checkIn);
+
+        request.setCheckOutDate(checkOut);
+
+
+        // -------------------------------------------------
+        // Create Reservation
+        // -------------------------------------------------
+
         try {
-            Reservation reservation = reservationService.createReservation(
-                    checkIn, checkOut, roomId, roomId, guests);
+
+            reservationService.createReservation(
+                    request
+            );
+
             return "redirect:/reservations/my-bookings";
+
         } catch (IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
+
+            model.addAttribute(
+                    "error",
+                    e.getMessage()
+            );
+
+            model.addAttribute(
+                    "room",
+                    roomRepository.findById(roomId).orElse(null)
+            );
+
             return "Customer/booking.jsp";
         }
     }
 
-    // ៣. បង្ហាញបញ្ជីការកក់របស់អតិថិជនបច្ចុប្បន្ន
+
+    // =====================================================
+    // 3. MY BOOKINGS
+    // GET /reservations/my-bookings
+    // =====================================================
+
     @GetMapping("/my-bookings")
-    public String myBookings(HttpSession session, Model model) {
-        User loggedInUser = (User) session.getAttribute("user");
+    public String myBookings(
+            HttpSession session,
+            Model model) {
+
+        User loggedInUser =
+                (User) session.getAttribute("user");
+
         if (loggedInUser == null) {
             return "redirect:/login";
         }
 
-        Optional<Customer> customerOpt = customerRepository.findByUserUserId(Math.toIntExact(loggedInUser.getUserId()));
+
+        // -------------------------------------------------
+        // Find Customer
+        // -------------------------------------------------
+
+        Optional<Customer> customerOpt =
+                customerRepository.findByUserUserId(
+                        Math.toIntExact(
+                                loggedInUser.getUserId()
+                        )
+                );
+
+
         if (customerOpt.isPresent()) {
-            List<Reservation> reservations = reservationService.getReservationsByCustomer(customerOpt.get().getCustId());
-            model.addAttribute("reservations", reservations);
+
+            List<Reservation> reservations =
+                    reservationService
+                            .getReservationsByCustomer(
+                                    customerOpt.get().getCustId()
+                            );
+
+            model.addAttribute(
+                    "reservations",
+                    reservations
+            );
+
+        } else {
+
+            model.addAttribute(
+                    "reservations",
+                    List.of()
+            );
         }
+
 
         return "Customer/my-bookings.jsp";
     }
 
-    // ៤. បោះបង់ការកក់បន្ទប់ (Cancel Booking)
+
+    // =====================================================
+    // 4. CANCEL BOOKING
+    // POST /reservations/cancel
+    // =====================================================
+
     @PostMapping("/cancel")
-    public String cancelBooking(@RequestParam("bookingId") Integer bookingId) {
-        reservationService.cancelReservation(bookingId);
+    public String cancelBooking(
+            @RequestParam("bookingId") Integer bookingId) {
+
+        reservationService.cancelReservation(
+                bookingId
+        );
+
         return "redirect:/reservations/my-bookings";
     }
 }

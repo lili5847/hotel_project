@@ -49,4 +49,11 @@ public class Room {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+//    public String getTypeLabel() {
+//        if ("POOL_VIEW".equals(type)) return "Pool view";
+//        if ("CITY_VIEW".equals(type)) return "City view";
+//        if ("FAMILY_SUITE".equals(type)) return "Family suite";
+//        return type;
+//    }
 }

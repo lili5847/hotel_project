@@ -22,10 +22,17 @@ public interface ReservationRepository extends JpaRepository<Reservation, Intege
     List<Reservation> findByStatus(String status);
 
     // ពិនិត្យមើលថាតើមានការកក់ដែលជាន់កាលបរិច្ឆេទគ្នានៅលើបន្ទប់តែមួយដែរឬទេ
-    @Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.room.roomId = :roomId " +
-            "AND r.status IN ('PENDING', 'CONFIRMED') " +
-            "AND (:checkInDate < r.checkOutDate AND :checkOutDate > r.checkInDate)")
-    boolean isRoomBookedOverlap(@Param("roomId") Integer roomId,
-                                @Param("checkInDate") LocalDate checkInDate,
-                                @Param("checkOutDate") LocalDate checkOutDate);
+    @Query("""
+        SELECT COUNT(r) > 0
+        FROM Reservation r
+        WHERE r.room.roomId = :roomId
+          AND r.status IN ('PENDING', 'CONFIRMED')
+          AND (:checkInDate < r.checkOut
+               AND :checkOutDate > r.checkIn)
+    """)
+        boolean isRoomBookedOverlap(
+                @Param("roomId") Integer roomId,
+                @Param("checkInDate") LocalDate checkInDate,
+                @Param("checkOutDate") LocalDate checkOutDate
+        );
 }

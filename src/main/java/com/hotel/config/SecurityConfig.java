@@ -1,12 +1,12 @@
 package com.hotel.config;
 
-import com.hotel.repository.UserRepository;
 import com.hotel.security.JwtAccessDeniedHandler;
 import com.hotel.security.JwtAuthenticationEntryPoint;
 import com.hotel.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy; // 1. Import Lazy
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -14,19 +14,14 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import java.util.Collections;
-
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true) // បើកដំណើរការ @PreAuthorize / @PostAuthorize
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Autowired
@@ -36,38 +31,21 @@ public class SecurityConfig {
     private JwtAccessDeniedHandler accessDeniedHandler;
 
     @Autowired
+    @Lazy // 2. បន្ថែម @Lazy ត្រង់នេះ ដើម្បីកាត់ផ្តាច់ Circular Dependency ជាមួយ JwtAuthenticationFilter
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    // ១. Fetch User ពី Database តាមរយៈ Username ឬ Email មក Authenticate
-    @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository) {
-        return usernameOrEmail -> userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
-                .map(user -> {
-                    String roleStr = user.getRole() != null ? user.getRole() : "CUSTOMER";
-                    String roleName = roleStr.startsWith("ROLE_") ? roleStr : "ROLE_" + roleStr;
-
-                    return new org.springframework.security.core.userdetails.User(
-                            user.getUsername(),
-                            user.getPassword(),
-                            Collections.singletonList(new SimpleGrantedAuthority(roleName))
-                    );
-                })
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username or email: " + usernameOrEmail));
-    }
-
-    // ២. PasswordEncoder Bean
+    // ១. PasswordEncoder Bean
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // ៣. AuthenticationManager Bean (សម្រាប់ JWT Auth)
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
-    // ៤. Security Filter Chain Configuration
+    // ៣. Security Filter Chain Configuration
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http

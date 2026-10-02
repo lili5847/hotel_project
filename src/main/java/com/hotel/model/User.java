@@ -35,12 +35,12 @@ public class User {
     @Column(name = "enabled")
     private boolean enabled = true;
 
-    // ករណីប្រើ String Role ធម្មតា (ឧ. "ROLE_CUSTOMER", "ROLE_ADMIN")
+    // ករណីប្រើ String Role ធម្មតា
     @Column(name = "role")
     private String role;
 
-    // ករណីប្រើ ManyToMany ជាមួយ Role Entity (ប្រសិនបើមាន Class Role.java)
-    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    // កែសម្រួល៖ លុប cascade = {CascadeType.PERSIST, CascadeType.MERGE} ចោល
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "user_id"),
@@ -73,7 +73,6 @@ public class User {
         this.userId = userId;
     }
 
-    // Getter & Setter សម្រាប់ id (ករណី code ចាស់ហៅ getId())
     public Long getId() {
         return userId;
     }

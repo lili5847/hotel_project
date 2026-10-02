@@ -25,39 +25,13 @@
                         Already registered? <a href="${ctx}/Customer/login.jsp">Log in</a>
                     </p>
 
-                    <%-- ============================================================
-                         BACKEND 1: MESSAGES SHOWN TO THE USER
-                         - "error"  : general failure, e.g.
-                                      request.setAttribute("error", "Something went wrong. Try again.");
-                         - "errors" : a Map<String,String> with one message per field.
-                                      Keys used below: fullName, email, phone, password, confirmPassword
-                                      e.g. errors.put("email", "This email is already registered.");
-                         After setting them, forward back to /customer/register.jsp.
-                         Text the user typed is kept automatically (from request params),
-                         except passwords, which are never sent back.
-                         ============================================================ --%>
-                    <c:if test="${not empty error}">
-                        <div class="alert alert-danger" role="alert"><c:out value="${error}" /></div>
-                    </c:if>
+                    <%-- General Error Banner --%>
+                    <div id="generalErrorAlert" class="alert alert-danger ${empty error ? 'd-none' : ''}" role="alert">
+                        <span id="generalErrorMessage"><c:out value="${error}" /></span>
+                    </div>
 
-                    <%-- ============================================================
-                         BACKEND 2: FORM SUBMIT
-                         POST to /register  ->  RegisterServlet.doPost()
-                         Parameters sent: fullName, email, phone, password, confirmPassword
-                         In the servlet:
-                           1. validate every field again (never trust the browser check)
-                           2. check the email is not taken (UserDAO)
-                           3. hash the password with PasswordUtil (jBCrypt)
-                           4. save with UserDAO using a PreparedStatement
-                           5. response.sendRedirect(ctx + "/login?registered=1");
-                         If your User model uses different fields (for example username),
-                         change the name="" attributes below to match.
-                         ============================================================ --%>
-                    <form action="${ctx}/register" method="post" class="needs-validation" novalidate>
-
-                        <%-- BACKEND (optional): CSRF token, uncomment when you add it
-                        <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
-                        --%>
+                    <%-- Form --%>
+                    <form id="registerForm" action="${ctx}/register" method="post" class="needs-validation" novalidate onsubmit="handleRegisterSubmit(event)">
 
                         <div class="row g-3">
                             <div class="col-12">
@@ -66,7 +40,7 @@
                                        id="fullName" name="fullName" maxlength="100"
                                        value="<c:out value='${param.fullName}' />"
                                        autocomplete="name" required autofocus>
-                                <div class="invalid-feedback">
+                                <div class="invalid-feedback" id="fullNameError">
                                     <c:out value="${empty errors.fullName ? 'Enter your full name.' : errors.fullName}" />
                                 </div>
                             </div>
@@ -77,7 +51,7 @@
                                        id="email" name="email" maxlength="150"
                                        value="<c:out value='${param.email}' />"
                                        autocomplete="email" required>
-                                <div class="invalid-feedback">
+                                <div class="invalid-feedback" id="emailError">
                                     <c:out value="${empty errors.email ? 'Enter a valid email address.' : errors.email}" />
                                 </div>
                             </div>
@@ -88,7 +62,7 @@
                                        id="phone" name="phone" maxlength="20"
                                        value="<c:out value='${param.phone}' />"
                                        autocomplete="tel" required>
-                                <div class="invalid-feedback">
+                                <div class="invalid-feedback" id="phoneError">
                                     <c:out value="${empty errors.phone ? 'Enter your phone number.' : errors.phone}" />
                                 </div>
                             </div>
@@ -103,7 +77,7 @@
                                             data-toggle-password="#password" aria-label="Show password">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <div class="invalid-feedback">
+                                    <div class="invalid-feedback" id="passwordError">
                                         <c:out value="${empty errors.password ? 'Use at least 8 characters.' : errors.password}" />
                                     </div>
                                 </div>
@@ -119,14 +93,14 @@
                                             data-toggle-password="#confirmPassword" aria-label="Show password">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <div class="invalid-feedback">
+                                    <div class="invalid-feedback" id="confirmPasswordError">
                                         <c:out value="${empty errors.confirmPassword ? 'Passwords do not match.' : errors.confirmPassword}" />
                                     </div>
                                 </div>
                             </div>
 
                             <div class="col-12 d-grid mt-2">
-                                <button type="submit" class="btn btn-primary btn-lg">Create account</button>
+                                <button type="submit" id="submitBtn" class="btn btn-primary btn-lg">Create account</button>
                             </div>
                         </div>
                     </form>
@@ -138,5 +112,116 @@
 </main>
 
 <script src="${ctx}/assets/js/auth.js"></script>
+
+<!-- ============================================================
+JAVASCRIPT FETCH API INTEGRATION FOR REGISTRATION
+============================================================ -->
+<script>
+    function handleRegisterSubmit(event) {
+        event.preventDefault();
+
+        const form = document.getElementById('registerForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const generalErrorAlert = document.getElementById('generalErrorAlert');
+        const generalErrorMessage = document.getElementById('generalErrorMessage');
+
+        // Reset validation states
+        form.classList.remove('was-validated');
+        generalErrorAlert.classList.add('d-none');
+        clearFieldErrors();
+
+        const fullName = document.getElementById('fullName').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        let hasClientError = false;
+
+        // Client-side password match check
+        if (password !== confirmPassword) {
+            showFieldError('confirmPassword', 'Passwords do not match.');
+            hasClientError = true;
+        }
+
+        if (!form.checkValidity() || hasClientError) {
+            form.classList.add('was-validated');
+            return;
+        }
+
+        // Disable submit button and show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating account...';
+
+        // Send JSON request via Fetch API to Spring Boot Backend
+        fetch('${ctx}/api/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fullName: fullName,
+                email: email,
+                phone: phone,
+                password: password,
+                confirmPassword: confirmPassword
+            })
+        })
+            .then(async response => {
+                const data = await response.json().catch(() => ({}));
+                if (response.ok) {
+                    return data;
+                } else {
+                    throw { status: response.status, data: data };
+                }
+            })
+            .then(data => {
+                // Successful registration -> redirect to login page with registered flag
+                window.location.href = '${ctx}/Customer/login.jsp?registered=1';
+            })
+            .catch(error => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Create account';
+
+                if (error.data) {
+                    // Handle field validation errors returned from Spring Boot
+                    if (error.data.errors) {
+                        const errs = error.data.errors;
+                        if (errs.fullName) showFieldError('fullName', errs.fullName);
+                        if (errs.email) showFieldError('email', errs.email);
+                        if (errs.phone) showFieldError('phone', errs.phone);
+                        if (errs.password) showFieldError('password', errs.password);
+                        if (errs.confirmPassword) showFieldError('confirmPassword', errs.confirmPassword);
+                    }
+                    if (error.data.message) {
+                        generalErrorMessage.textContent = error.data.message;
+                        generalErrorAlert.classList.remove('d-none');
+                    }
+                } else {
+                    generalErrorMessage.textContent = 'Something went wrong. Please try again.';
+                    generalErrorAlert.classList.remove('d-none');
+                }
+            });
+    }
+
+    function showFieldError(fieldId, message) {
+        const input = document.getElementById(fieldId);
+        const errorDiv = document.getElementById(fieldId + 'Error');
+        if (input && errorDiv) {
+            input.classList.add('is-invalid');
+            errorDiv.textContent = message;
+        }
+    }
+
+    function clearFieldErrors() {
+        const fields = ['fullName', 'email', 'phone', 'password', 'confirmPassword'];
+        fields.forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            if (input) {
+                input.classList.remove('is-invalid');
+            }
+        });
+    }
+</script>
 
 <jsp:include page="/common/footer.jsp" />

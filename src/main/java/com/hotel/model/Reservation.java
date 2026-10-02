@@ -3,14 +3,10 @@ package com.hotel.model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
 
 @Entity
 @Table(name = "RESERVATIONS")
-public class Reservation implements List<Reservation> {
+public class Reservation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,7 +39,8 @@ public class Reservation implements List<Reservation> {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    public Reservation() {}
+    public Reservation() {
+    }
 
     @PrePersist
     protected void onCreate() {
@@ -52,146 +49,79 @@ public class Reservation implements List<Reservation> {
         }
     }
 
+    // =========================
     // Getters and Setters
-    public Integer getBookingId() { return bookingId; }
-    public void setBookingId(Integer bookingId) { this.bookingId = bookingId; }
+    // =========================
 
-    public Customer getCustomer() { return customer; }
-    public void setCustomer(Customer customer) { this.customer = customer; }
-
-    public Room getRoom() { return room; }
-    public void setRoom(Room room) { this.room = room; }
-
-    public LocalDate getCheckIn() { return checkIn; }
-    public void setCheckIn(LocalDate checkIn) { this.checkIn = checkIn; }
-
-    public LocalDate getCheckOut() { return checkOut; }
-    public void setCheckOut(LocalDate checkOut) { this.checkOut = checkOut; }
-
-    public Integer getGuests() { return guests; }
-    public void setGuests(Integer guests) { this.guests = guests; }
-
-    public Double getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-
-    @Override
-    public int size() {
-        return 0;
+    public Integer getBookingId() {
+        return bookingId;
     }
 
-    @Override
-    public boolean isEmpty() {
-        return false;
+    public void setBookingId(Integer bookingId) {
+        this.bookingId = bookingId;
     }
 
-    @Override
-    public boolean contains(Object o) {
-        return false;
+    public Customer getCustomer() {
+        return customer;
     }
 
-    @Override
-    public Iterator<Reservation> iterator() {
-        return null;
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
     }
 
-    @Override
-    public Object[] toArray() {
-        return new Object[0];
+    public Room getRoom() {
+        return room;
     }
 
-    @Override
-    public <T> T[] toArray(T[] a) {
-        return null;
+    public void setRoom(Room room) {
+        this.room = room;
     }
 
-    @Override
-    public boolean add(Reservation reservation) {
-        return false;
+    public LocalDate getCheckIn() {
+        return checkIn;
     }
 
-    @Override
-    public boolean remove(Object o) {
-        return false;
+    public void setCheckIn(LocalDate checkIn) {
+        this.checkIn = checkIn;
     }
 
-    @Override
-    public boolean containsAll(Collection<?> c) {
-        return false;
+    public LocalDate getCheckOut() {
+        return checkOut;
     }
 
-    @Override
-    public boolean addAll(Collection<? extends Reservation> c) {
-        return false;
+    public void setCheckOut(LocalDate checkOut) {
+        this.checkOut = checkOut;
     }
 
-    @Override
-    public boolean addAll(int index, Collection<? extends Reservation> c) {
-        return false;
+    public Integer getGuests() {
+        return guests;
     }
 
-    @Override
-    public boolean removeAll(Collection<?> c) {
-        return false;
+    public void setGuests(Integer guests) {
+        this.guests = guests;
     }
 
-    @Override
-    public boolean retainAll(Collection<?> c) {
-        return false;
+    public Double getTotalAmount() {
+        return totalAmount;
     }
 
-    @Override
-    public void clear() {
-
+    public void setTotalAmount(Double totalAmount) {
+        this.totalAmount = totalAmount;
     }
 
-    @Override
-    public Reservation get(int index) {
-        return null;
+    public String getStatus() {
+        return status;
     }
 
-    @Override
-    public Reservation set(int index, Reservation element) {
-        return null;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
-    @Override
-    public void add(int index, Reservation element) {
-
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
-    @Override
-    public Reservation remove(int index) {
-        return null;
-    }
-
-    @Override
-    public int indexOf(Object o) {
-        return 0;
-    }
-
-    @Override
-    public int lastIndexOf(Object o) {
-        return 0;
-    }
-
-    @Override
-    public ListIterator<Reservation> listIterator() {
-        return null;
-    }
-
-    @Override
-    public ListIterator<Reservation> listIterator(int index) {
-        return null;
-    }
-
-    @Override
-    public List<Reservation> subList(int fromIndex, int toIndex) {
-        return List.of();
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

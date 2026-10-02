@@ -1,47 +1,24 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}" />
-<c:set var="pageTitle" value="Customers" />
-
-<%-- ============================================================
-     BACKEND 0: ACCESS CONTROL
-     Reachable only through CustomerManagementServlet at
-     /admin/customers, behind AdminFilter.
-     ============================================================ --%>
 
 <jsp:include page="/common/header.jsp">
     <jsp:param name="title" value="Customers" />
 </jsp:include>
 <jsp:include page="/common/admin-sidebar.jsp" />
 
-<c:if test="${not empty param.flash}">
-    <c:choose>
-        <c:when test="${param.flash == 'activated'}"><div class="alert alert-success">Account re-activated.</div></c:when>
-        <c:when test="${param.flash == 'suspended'}"><div class="alert alert-warning">Account suspended.</div></c:when>
-        <c:otherwise><div class="alert alert-danger">Something went wrong. Please try again.</div></c:otherwise>
-    </c:choose>
-</c:if>
-
 <div class="mb-4">
     <h1 class="h4 mb-0">Customers</h1>
     <p class="text-body-secondary small mb-0">View registered guests and their reservation activity.</p>
 </div>
 
-<%-- ============================================================
-     BACKEND 1: SEARCH
-     GET /admin/customers?q=...
-     CustomerManagementServlet.doGet() reads "q", calls
-     UserDAO.searchByRole("CUSTOMER", q), sets request attribute
-     "customers" plus echoes "q" back so the box stays filled in.
-     ============================================================ --%>
+<!-- Search Panel -->
 <div class="panel mb-4">
-    <form action="${ctx}/admin/customers" method="get" class="p-3">
+    <form id="searchForm" class="p-3" onsubmit="event.preventDefault(); loadCustomers();">
         <div class="row g-3 align-items-end">
             <div class="col-md-6">
                 <label for="q" class="form-label">Search by name or email</label>
-                <input type="text" class="form-control" id="q" name="q" value="<c:out value='${q}' />"
-                       placeholder="e.g. jane@example.com">
+                <input type="text" class="form-control" id="q" name="q" placeholder="e.g. jane@example.com">
             </div>
             <div class="col-md-2 d-grid">
                 <button type="submit" class="btn btn-outline-primary">Search</button>
@@ -53,103 +30,153 @@
 <div class="panel">
     <div class="panel-header">
         <h2 class="h5 mb-0">
-            All customers
-            <c:if test="${not empty customers}">
-                <span class="text-body-secondary fw-normal">(${fn:length(customers)})</span>
-            </c:if>
+            All customers <span id="customerCount" class="text-body-secondary fw-normal"></span>
         </h2>
     </div>
 
-    <%-- ============================================================
-         BACKEND 2: CUSTOMERS TABLE
-         request attribute "customers": a List where each item exposes
-           getId(), getFullName(), getEmail(), getPhone(),
-           getReservationCount(), getJoinedDate(), getStatus()
-           (ACTIVE / SUSPENDED)
-         Suggested source: UserDAO.searchByRole("CUSTOMER", q) above,
-         joined against a COUNT(*) on reservations per user.
-         ============================================================ --%>
-    <c:choose>
-        <c:when test="${empty customers}">
-            <div class="panel-empty">
-                <i class="bi bi-people"></i>
-                <p class="mb-0">No customers match this search.</p>
-            </div>
-        </c:when>
-        <c:otherwise>
-            <div class="table-responsive">
-                <table class="table admin-table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Contact</th>
-                            <th>Reservations</th>
-                            <th>Joined</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <c:forEach var="cust" items="${customers}">
-                            <tr>
-                                <td class="fw-medium"><c:out value="${cust.fullName}" /></td>
-                                <td>
-                                    <div class="small"><c:out value="${cust.email}" /></div>
-                                    <div class="small text-body-secondary"><c:out value="${cust.phone}" /></div>
-                                </td>
-                                <td>
-                                    <a href="${ctx}/admin/reservations?q=${cust.email}" class="small">
-                                        <c:out value="${cust.reservationCount}" /> booking(s)
-                                    </a>
-                                </td>
-                                <td><c:out value="${cust.joinedDate}" /></td>
-                                <td>
-                                    <c:choose>
-                                        <c:when test="${cust.status == 'ACTIVE'}">
-                                            <span class="badge status-badge status-confirmed">Active</span>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <span class="badge status-badge status-cancelled">Suspended</span>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </td>
-
-                                <%-- ============================================================
-                                     BACKEND 3: SUSPEND / RE-ACTIVATE
-                                     POST /admin/customers, action=suspend|activate, id=...
-                                     CustomerManagementServlet should:
-                                       - flip the user's status column
-                                       - a suspended user's LoginServlet check must reject
-                                         their login even with a correct password
-                                       - never let an admin suspend their own account here
-                                         (guard server-side, not just by hiding the button)
-                                     ============================================================ --%>
-                                <td class="text-end">
-                                    <c:choose>
-                                        <c:when test="${cust.status == 'ACTIVE'}">
-                                            <form action="${ctx}/admin/customers" method="post" class="d-inline"
-                                                  onsubmit="return confirm('Suspend this account?');">
-                                                <input type="hidden" name="action" value="suspend">
-                                                <input type="hidden" name="id" value="${cust.id}">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Suspend</button>
-                                            </form>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <form action="${ctx}/admin/customers" method="post" class="d-inline">
-                                                <input type="hidden" name="action" value="activate">
-                                                <input type="hidden" name="id" value="${cust.id}">
-                                                <button type="submit" class="btn btn-sm btn-outline-primary">Re-activate</button>
-                                            </form>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </td>
-                            </tr>
-                        </c:forEach>
-                    </tbody>
-                </table>
-            </div>
-        </c:otherwise>
-    </c:choose>
+    <!-- Table Container -->
+    <div class="table-responsive">
+        <table class="table admin-table align-middle mb-0">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Reservations</th>
+                <th>Joined</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+            </tr>
+            </thead>
+            <tbody id="customerTableBody">
+            <tr>
+                <td colspan="6" class="text-center py-4">Loading data...</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <jsp:include page="/common/admin-footer.jsp" />
+
+<!-- ============================================================
+JAVASCRIPT FETCH API INTEGRATION
+============================================================ -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        loadCustomers();
+    });
+
+    function loadCustomers() {
+        const query = document.getElementById('q').value;
+        const token = localStorage.getItem('accessToken'); // យក JWT Token ពី LocalStorage
+
+        // កំណត់ Endpoint URL (អាចជា /api/users, /api/customers ឬ /api/admin/customers តាមកូដ Backend)
+        let url = '${ctx}/api/users';
+        if (query) {
+            url += '?q=' + encodeURIComponent(query);
+        }
+
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token // ផ្ញើ Bearer Token សម្រាប់ Endpoint ដែលត្រូវការ Auth
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch customers');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // ពិនិត្យ Response (បើ API របស់អ្នកបកមកជា data.data ឬជា Array ផ្ទាល់)
+                const customers = Array.isArray(data) ? data : (data.data || []);
+                renderCustomerTable(customers);
+            })
+            .catch(error => {
+                console.error('Error fetching customers:', error);
+                document.getElementById('customerTableBody').innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-danger py-4">
+                    មានបញ្ហាក្នុងការទាញយកទិន្នន័យ ឬពុំមានសិទ្ធិចូលមើល (Unauthorized)។
+                </td>
+            </tr>`;
+            });
+    }
+
+    function renderCustomerTable(customers) {
+        const tbody = document.getElementById('customerTableBody');
+        const countSpan = document.getElementById('customerCount');
+
+        countSpan.textContent = `(${customers.length})`;
+
+        if (customers.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-4">
+                    <i class="bi bi-people fs-3 text-secondary"></i>
+                    <p class="mb-0 mt-2">No customers match this search.</p>
+                </td>
+            </tr>`;
+            return;
+        }
+
+        let html = '';
+        customers.forEach(cust => {
+            const isStatusActive = (cust.status === 'ACTIVE');
+            const badgeClass = isStatusActive ? 'status-confirmed' : 'status-cancelled';
+            const badgeText = isStatusActive ? 'Active' : 'Suspended';
+
+            const actionButton = isStatusActive
+                ? `<button onclick="toggleCustomerStatus(${cust.id}, 'suspend')" class="btn btn-sm btn-outline-danger">Suspend</button>`
+                : `<button onclick="toggleCustomerStatus(${cust.id}, 'activate')" class="btn btn-sm btn-outline-primary">Re-activate</button>`;
+
+            html += `
+            <tr>
+                <td class="fw-medium">${cust.fullName || 'N/A'}</td>
+                <td>
+                    <div class="small">${cust.email || 'N/A'}</div>
+                    <div class="small text-body-secondary">${cust.phone || ''}</div>
+                </td>
+                <td>
+                    <a href="${ctx}/admin/reservations?q=${cust.email}" class="small">
+                        ${cust.reservationCount || 0} booking(s)
+                    </a>
+                </td>
+                <td>${cust.joinedDate || 'N/A'}</td>
+                <td>
+                    <span class="badge status-badge ${badgeClass}">${badgeText}</span>
+                </td>
+                <td class="text-end">
+                    ${actionButton}
+                </td>
+            </tr>`;
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    // Function សម្រាប់ Suspend / Activate តាម API POST
+    function toggleCustomerStatus(customerId, action) {
+        if (action === 'suspend' && !confirm('Suspend this account?')) return;
+
+        const token = localStorage.getItem('accessToken');
+
+        fetch('${ctx}/api/users/' + customerId + '/' + action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    loadCustomers(); // Reload បញ្ជីឡើងវិញពេលផ្លាស់ប្តូរជោគជ័យ
+                } else {
+                    alert('Operation failed.');
+                }
+            })
+            .catch(err => console.error('Error toggling status:', err));
+    }
+</script>

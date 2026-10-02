@@ -2,7 +2,6 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}" />
-<c:set var="ctx" value="${pageContext.request.contextPath}" />
 <%--
   Highlights the current nav item by matching the start of the request URI.
   Works as long as each admin servlet's URL starts with the path shown below.
@@ -43,7 +42,7 @@
             <a href="${ctx}/index.jsp" class="admin-nav-link">
                 <i class="bi bi-box-arrow-up-left"></i><span>View site</span>
             </a>
-            <a href="${ctx}/logout" class="admin-nav-link">
+            <a href="#" onclick="handleLogout(event)" class="admin-nav-link">
                 <i class="bi bi-box-arrow-right"></i><span>Log out</span>
             </a>
         </div>
@@ -59,16 +58,64 @@
 
             <h1 class="admin-page-title"><c:out value="${empty pageTitle ? 'Dashboard' : pageTitle}" /></h1>
 
-            <%-- ============================================================
-                 BACKEND: CURRENT ADMIN NAME
-                 AdminFilter should already guarantee sessionScope.user exists
-                 and sessionScope.user.role == 'ADMIN' before any /admin/* page
-                 is reached, so this should never be empty in practice.
-                 ============================================================ --%>
             <div class="admin-user">
                 <i class="bi bi-person-circle"></i>
-                <span><c:out value="${empty sessionScope.user ? 'Admin' : sessionScope.user.fullName}" /></span>
+                <span id="adminFullName">
+                    <c:out value="${empty sessionScope.user ? 'Admin' : sessionScope.user.fullName}" />
+                </span>
             </div>
         </header>
 
         <main class="admin-content">
+
+            <!-- ============================================================
+                 JAVASCRIPT FETCH API INTEGRATION FOR SIDEBAR & TOPBAR
+                 ============================================================ -->
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    loadAdminUserProfile();
+                });
+
+                function loadAdminUserProfile() {
+                    const token = localStorage.getItem('accessToken');
+                    if (!token) return;
+
+                    fetch('${ctx}/api/admin/profile', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        }
+                    })
+                        .then(response => {
+                            if (response.ok) return response.json();
+                            throw new Error('Failed to load profile');
+                        })
+                        .then(data => {
+                            if (data && data.fullName) {
+                                document.getElementById('adminFullName').textContent = data.fullName;
+                            }
+                        })
+                        .catch(error => {
+                            console.warn('Could not fetch admin user details via API:', error);
+                        });
+                }
+
+                function handleLogout(event) {
+                    event.preventDefault();
+                    const token = localStorage.getItem('accessToken');
+
+                    fetch('${ctx}/api/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        }
+                    })
+                        .finally(() => {
+                            localStorage.removeItem('accessToken');
+                            sessionStorage.clear();
+                            window.location.href = '${ctx}/login.jsp';
+                        });
+                }
+            </script>

@@ -12,8 +12,7 @@
         <div class="card border-0 shadow rounded-4 overflow-hidden">
             <div class="row g-0">
 
-                <!-- Photo panel (hidden on small screens) -->
-                <!--  class="position-absolute top-0 start-0 w-100 h-100 object-fit-cover"-->
+                <!-- Photo panel -->
                 <div class="col-lg-5 auth-aside d-none d-lg-flex flex-column justify-content-end p-5">
                     <h2 class="h3">Welcome back</h2>
                     <p class="mb-0">Log in to see your reservations and book your next stay.</p>
@@ -26,55 +25,16 @@
                         New here? <a href="${ctx}/Customer/register.jsp">Create an account</a>
                     </p>
 
-                    <%-- ============================================================
-                         BACKEND 1: MESSAGES SHOWN TO THE USER
-                         - "error"  : LoginServlet sets this on a failed login, e.g.
-                                      request.setAttribute("error", "Incorrect email or password.");
-                                      then forwards back to /customer/login.jsp
-                         - ?registered=1 : RegisterServlet redirects here after sign-up
-                         - ?loggedout=1  : LogoutServlet redirects here after logout
-                         - ?required=1   : AuthFilter redirects here when login is needed
-                         ============================================================ --%>
-                    <c:if test="${not empty error}">
-                        <div class="alert alert-danger" role="alert"><c:out value="${error}" /></div>
-                    </c:if>
-                    <c:if test="${param.registered == '1'}">
-                        <div class="alert alert-success" role="alert">Account created. Log in to continue.</div>
-                    </c:if>
-                    <c:if test="${param.loggedout == '1'}">
-                        <div class="alert alert-info" role="alert">You have been logged out.</div>
-                    </c:if>
-                    <c:if test="${param.required == '1'}">
-                        <div class="alert alert-warning" role="alert">Please log in to continue.</div>
-                    </c:if>
+                    <!-- Alert Container for dynamic response messages -->
+                    <div id="alert-message"></div>
 
-                    <%-- ============================================================
-                         BACKEND 2: FORM SUBMIT
-                         POST to /login  ->  LoginServlet.doPost()
-                         Parameters sent: email, password, redirect (optional)
-                         On success in the servlet:
-                           1. verify the password with PasswordUtil / jBCrypt
-                           2. request.changeSessionId();
-                           3. session.setAttribute("user", user);
-                           4. redirect to "redirect" if it is a safe internal path,
-                              otherwise to /admin/dashboard (ADMIN) or /index.jsp
-                         ============================================================ --%>
-                    <form action="${ctx}/login" method="post" class="needs-validation" novalidate>
-
-                        <%-- BACKEND (optional): CSRF token, uncomment when you add it
-                        <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
-                        --%>
-
-                        <%-- BACKEND 3: where to go after login (set by AuthFilter, e.g. /login?redirect=/reservations).
-                             Validate on the server that it starts with "/" so nobody can redirect users to another site. --%>
-                        <input type="hidden" name="redirect" value="<c:out value='${param.redirect}' />">
+                    <form id="loginForm" class="needs-validation" novalidate>
 
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email"
-                                   value="<c:out value='${param.email}' />"
-                                   autocomplete="email" required autofocus>
-                            <div class="invalid-feedback">Enter a valid email address.</div>
+                            <label for="username" class="form-label">Username / Email</label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   autocomplete="username" required autofocus>
+                            <div class="invalid-feedback">Please enter a valid username or email.</div>
                         </div>
 
                         <div class="mb-4">
@@ -86,12 +46,12 @@
                                         data-toggle-password="#password" aria-label="Show password">
                                     <i class="bi bi-eye"></i>
                                 </button>
-                                <div class="invalid-feedback">Enter your password.</div>
+                                <div class="invalid-feedback">Please enter your password.</div>
                             </div>
                         </div>
 
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Log in</button>
+                            <button type="submit" id="btnLogin" class="btn btn-primary btn-lg">Log in</button>
                         </div>
                     </form>
                 </div>
@@ -100,6 +60,77 @@
         </div>
     </div>
 </main>
+
+<!-- JavaScript Fetch API for Login -->
+<script>
+    const BASE_URL = '${ctx}/api';
+
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const alertContainer = document.getElementById('alert-message');
+        const btnLogin = document.getElementById('btnLogin');
+        const usernameInput = document.getElementById('username').value.trim();
+        const passwordInput = document.getElementById('password').value.trim();
+
+        if (!usernameInput || !passwordInput) {
+            this.classList.add('was-validated');
+            return;
+        }
+
+        btnLogin.disabled = true;
+        btnLogin.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Logging in...';
+        alertContainer.innerHTML = '';
+
+        try {
+            const response = await fetch(`${BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: usernameInput,
+                    password: passwordInput
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                if (result.data && result.data.accessToken) {
+                    localStorage.setItem('token', result.data.accessToken);
+                    localStorage.setItem('user', JSON.stringify(result.data.user || {}));
+                }
+
+                alertContainer.innerHTML = `
+                    <div class="alert alert-success" role="alert">
+                        Login successful! Redirecting...
+                    </div>`;
+
+                setTimeout(() => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirectUrl = urlParams.get('redirect') || '${ctx}/Customer/room-search.jsp';
+                    window.location.href = redirectUrl;
+                }, 1000);
+
+            } else {
+                alertContainer.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        ${result.message || 'Invalid username or password!'}
+                    </div>`;
+            }
+        } catch (error) {
+            console.error('Login Error:', error);
+            alertContainer.innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    Failed to connect to the server. Please try again!
+                </div>`;
+        } finally {
+            btnLogin.disabled = false;
+            btnLogin.innerHTML = 'Log in';
+        }
+    });
+</script>
 
 <script src="${ctx}/assets/js/auth.js"></script>
 
