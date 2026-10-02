@@ -1,13 +1,10 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 
 <jsp:include page="/common/header.jsp">
     <jsp:param name="title" value="Rooms" />
 </jsp:include>
 <jsp:include page="/common/admin-sidebar.jsp" />
 
-<!-- Dynamic Alert Container -->
 <div id="alertContainer"></div>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -20,26 +17,23 @@
     </button>
 </div>
 
-<!-- Filter Bar -->
+<!-- Filter bar (filters run in the browser; the API has no filter params) -->
 <div class="panel mb-4">
-    <form id="filterForm" class="p-3" onsubmit="event.preventDefault(); loadRooms();">
+    <form id="filterForm" class="p-3" onsubmit="event.preventDefault(); applyFilters();">
         <div class="row g-3 align-items-end">
             <div class="col-md-4">
-                <label for="q" class="form-label">Room number or name</label>
-                <input type="text" class="form-control" id="q" name="q" placeholder="Search room...">
+                <label for="q" class="form-label">Room number or description</label>
+                <input type="text" class="form-control" id="q" placeholder="Search room...">
             </div>
             <div class="col-md-3">
                 <label for="type" class="form-label">Room type</label>
-                <select class="form-select" id="type" name="type">
+                <select class="form-select" id="type">
                     <option value="">All types</option>
-                    <option value="POOL_VIEW">Pool view</option>
-                    <option value="CITY_VIEW">City view</option>
-                    <option value="FAMILY_SUITE">Family suite</option>
                 </select>
             </div>
             <div class="col-md-3">
                 <label for="status" class="form-label">Status</label>
-                <select class="form-select" id="status" name="status">
+                <select class="form-select" id="status">
                     <option value="">All statuses</option>
                     <option value="AVAILABLE">Available</option>
                     <option value="OCCUPIED">Occupied</option>
@@ -56,16 +50,11 @@
 
 <div class="row g-4">
 
-    <!-- Rooms Table Panel -->
     <div class="col-lg-8">
         <div class="panel">
             <div class="panel-header">
-                <h2 class="h5 mb-0">
-                    All rooms
-                    <span id="roomCount" class="text-body-secondary fw-normal"></span>
-                </h2>
+                <h2 class="h5 mb-0">All rooms <span id="roomCount" class="text-body-secondary fw-normal"></span></h2>
             </div>
-
             <div class="table-responsive">
                 <table class="table admin-table align-middle mb-0">
                     <thead>
@@ -78,16 +67,13 @@
                     </tr>
                     </thead>
                     <tbody id="roomsTableBody">
-                    <tr>
-                        <td colspan="5" class="text-center py-4">Loading data...</td>
-                    </tr>
+                    <tr><td colspan="5" class="text-center py-4">Loading data...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Add / Edit Form Panel -->
     <div class="col-lg-4">
         <div class="panel" id="roomFormPanel">
             <div class="panel-header">
@@ -102,24 +88,45 @@
                     <input type="text" class="form-control" id="roomNumber" required>
                 </div>
                 <div class="mb-3">
-                    <label for="name" class="form-label small fw-medium">Display name</label>
-                    <input type="text" class="form-control" id="name" required>
+                    <label for="floor" class="form-label small fw-medium">Floor</label>
+                    <input type="number" min="0" step="1" class="form-control" id="floor" required>
                 </div>
                 <div class="mb-3">
-                    <label for="roomType" class="form-label small fw-medium">Room type</label>
-                    <select class="form-select" id="roomType" required>
-                        <option value="POOL_VIEW">Pool view</option>
-                        <option value="CITY_VIEW">City view</option>
-                        <option value="FAMILY_SUITE">Family suite</option>
-                    </select>
+                    <label for="description" class="form-label small fw-medium">Description</label>
+                    <input type="text" class="form-control" id="description">
                 </div>
                 <div class="mb-3">
-                    <label for="price" class="form-label small fw-medium">Price per night</label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input type="number" min="0" step="1" class="form-control" id="price" required>
+                    <label for="roomTypeSelect" class="form-label small fw-medium">Room type</label>
+                    <select class="form-select" id="roomTypeSelect" onchange="toggleNewType()"></select>
+                </div>
+
+                <!-- Shown only when "+ New room type" is selected -->
+                <div id="newTypeFields" class="border rounded p-3 mb-3 d-none">
+                    <div class="mb-2">
+                        <label for="typeName" class="form-label small fw-medium">Type name</label>
+                        <input type="text" class="form-control" id="typeName">
+                    </div>
+                    <div class="mb-2">
+                        <label for="price" class="form-label small fw-medium">Price per night</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" min="0" step="1" class="form-control" id="price">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label for="capacity" class="form-label small fw-medium">Capacity (guests)</label>
+                        <input type="number" min="1" step="1" class="form-control" id="capacity">
+                    </div>
+                    <div class="mb-2">
+                        <label for="amenities" class="form-label small fw-medium">Amenities</label>
+                        <input type="text" class="form-control" id="amenities" placeholder="Free Wi-Fi, Air conditioning">
+                    </div>
+                    <div>
+                        <label for="typeDescription" class="form-label small fw-medium">Type description</label>
+                        <input type="text" class="form-control" id="typeDescription">
                     </div>
                 </div>
+
                 <div class="mb-4">
                     <label for="roomStatus" class="form-label small fw-medium">Status</label>
                     <select class="form-select" id="roomStatus" required>
@@ -141,197 +148,221 @@
 
 <jsp:include page="/common/admin-footer.jsp" />
 
-<!-- ============================================================
-JAVASCRIPT FETCH API INTEGRATION FOR ROOMS
-============================================================ -->
 <script>
-    let roomsData = [];
+    const ctx = '<%= request.getContextPath() %>';
+    const token = localStorage.getItem('accessToken');
+    if (!token) { window.location.href = ctx + '/login'; }
 
-    document.addEventListener("DOMContentLoaded", function () {
+    let roomsData = [];   // rooms from GET /api/rooms
+    let typesData = [];   // distinct room types found in those rooms
+
+    document.addEventListener('DOMContentLoaded', function () {
         loadRooms();
     });
 
-    function loadRooms() {
-        const token = localStorage.getItem('accessToken');
+    // ---- API helper: adds the token, unwraps ApiResponse errors ----
+    function api(path, options) {
+        options = options || {};
+        options.headers = Object.assign({
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }, options.headers || {});
 
-        const q = document.getElementById('q').value;
+        return fetch(ctx + path, options).then(function (response) {
+            if (response.status === 401) {
+                localStorage.removeItem('accessToken');
+                window.location.href = ctx + '/login';
+                throw new Error('Unauthorized');
+            }
+            return response.json().catch(function () { return {}; }).then(function (body) {
+                if (!response.ok) {
+                    throw new Error(body.message || ('HTTP ' + response.status));
+                }
+                return body;
+            });
+        });
+    }
+
+    // ---- Load + render ----
+    function loadRooms() {
+        api('/api/rooms', { method: 'GET' })
+            .then(function (res) {
+                roomsData = Array.isArray(res.data) ? res.data : [];
+                buildTypes();
+                applyFilters();
+            })
+            .catch(function (error) {
+                console.error('Error fetching rooms:', error);
+                document.getElementById('roomsTableBody').innerHTML =
+                    '<tr><td colspan="5" class="text-center text-danger py-4">Could not load rooms: ' +
+                    escapeHtml(error.message) + '</td></tr>';
+            });
+    }
+
+    function buildTypes() {
+        const seen = {};
+        typesData = [];
+        roomsData.forEach(function (r) {
+            const t = r.roomType;
+            if (t && t.roomTypeId != null && !seen[t.roomTypeId]) {
+                seen[t.roomTypeId] = true;
+                typesData.push(t);
+            }
+        });
+
+        const filterSel = document.getElementById('type');
+        const keepFilter = filterSel.value;
+        filterSel.innerHTML = '<option value="">All types</option>' + typesData.map(function (t) {
+            return '<option value="' + t.roomTypeId + '">' + escapeHtml(t.typeName) + '</option>';
+        }).join('');
+        filterSel.value = keepFilter;
+
+        const formSel = document.getElementById('roomTypeSelect');
+        const keepForm = formSel.value;
+        formSel.innerHTML = typesData.map(function (t) {
+            return '<option value="' + t.roomTypeId + '">' + escapeHtml(t.typeName) +
+                   ' ($' + (t.price || 0) + ')</option>';
+        }).join('') + '<option value="new">+ New room type...</option>';
+        formSel.value = keepForm || (typesData.length ? String(typesData[0].roomTypeId) : 'new');
+        if (!formSel.value) formSel.value = 'new';
+        toggleNewType();
+    }
+
+    function applyFilters() {
+        const q = document.getElementById('q').value.trim().toLowerCase();
         const type = document.getElementById('type').value;
         const status = document.getElementById('status').value;
 
-        let params = new URLSearchParams();
-        if (q) params.append('q', q);
-        if (type) params.append('type', type);
-        if (status) params.append('status', status);
-
-        fetch(`${ctx}/api/admin/rooms?${params.toString()}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
+        const filtered = roomsData.filter(function (r) {
+            if (q) {
+                const hay = ((r.roomNumber || '') + ' ' + (r.description || '')).toLowerCase();
+                if (hay.indexOf(q) === -1) return false;
             }
-        })
-            .then(response => {
-                if (!response.ok) throw new Error('Failed to fetch rooms');
-                return response.json();
-            })
-            .then(data => {
-                roomsData = Array.isArray(data) ? data : (data.content || data.data || []);
-                renderRoomsTable(roomsData);
-            })
-            .catch(error => {
-                console.error('Error fetching rooms:', error);
-                document.getElementById('roomsTableBody').innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center text-danger py-4">
-                    Nakamaisyu ti panag-fetch ti datos dagiti kuarto.
-                </td>
-            </tr>`;
-            });
+            if (type && String(r.roomType && r.roomType.roomTypeId) !== type) return false;
+            if (status && r.status !== status) return false;
+            return true;
+        });
+        renderRoomsTable(filtered);
     }
 
     function renderRoomsTable(rooms) {
         const tbody = document.getElementById('roomsTableBody');
-        const countSpan = document.getElementById('roomCount');
-
-        countSpan.textContent = `(${rooms.length})`;
+        document.getElementById('roomCount').textContent = '(' + rooms.length + ')';
 
         if (rooms.length === 0) {
-            tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center py-4">
-                    <i class="bi bi-door-closed fs-3 text-secondary"></i>
-                    <p class="mb-0 mt-2">No rooms match these filters.</p>
-                </td>
-            </tr>`;
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">' +
+                '<i class="bi bi-door-closed fs-3 text-secondary"></i>' +
+                '<p class="mb-0 mt-2">No rooms match these filters.</p></td></tr>';
             return;
         }
 
-        let html = '';
-        rooms.forEach(room => {
+        tbody.innerHTML = rooms.map(function (room) {
             let badgeClass = 'status-pending';
-            let statusText = 'Maintenance';
+            let statusText = room.status || 'Unknown';
+            if (room.status === 'AVAILABLE') { badgeClass = 'status-confirmed'; statusText = 'Available'; }
+            else if (room.status === 'OCCUPIED') { badgeClass = 'status-checked-in'; statusText = 'Occupied'; }
+            else if (room.status === 'MAINTENANCE') { statusText = 'Maintenance'; }
 
-            if (room.status === 'AVAILABLE') {
-                badgeClass = 'status-confirmed';
-                statusText = 'Available';
-            } else if (room.status === 'OCCUPIED') {
-                badgeClass = 'status-checked-in';
-                statusText = 'Occupied';
-            }
-
-            const typeLabel = room.typeLabel || formatTypeLabel(room.type);
-
-            html += `
-            <tr>
-                <td>
-                    <div class="fw-medium">Room ${escapeHtml(room.roomNumber)}</div>
-                    <div class="small text-body-secondary">${escapeHtml(room.name || '')}</div>
-                </td>
-                <td>${escapeHtml(typeLabel)}</td>
-                <td>&#36;${room.price || 0}</td>
-                <td>
-                    <span class="badge status-badge ${badgeClass}">${statusText}</span>
-                </td>
-                <td class="text-end text-nowrap">
-                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                            onclick="editRoom(${room.id})">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-danger"
-                            onclick="deleteRoom(${room.id})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>`;
-        });
-
-        tbody.innerHTML = html;
+            const t = room.roomType || {};
+            return '<tr>' +
+                '<td><div class="fw-medium">Room ' + escapeHtml(room.roomNumber) + '</div>' +
+                '<div class="small text-body-secondary">Floor ' + escapeHtml(room.floor) +
+                (room.description ? ' &middot; ' + escapeHtml(room.description) : '') + '</div></td>' +
+                '<td>' + escapeHtml(t.typeName || '') + '</td>' +
+                '<td>&#36;' + (t.price || 0) + '</td>' +
+                '<td><span class="badge status-badge ' + badgeClass + '">' + escapeHtml(statusText) + '</span></td>' +
+                '<td class="text-end text-nowrap">' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary" onclick="editRoom(' + room.roomId + ')"><i class="bi bi-pencil"></i></button> ' +
+                '<button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteRoom(' + room.roomId + ')"><i class="bi bi-trash"></i></button>' +
+                '</td></tr>';
+        }).join('');
     }
 
+    // ---- Create / update ----
     function saveRoom(event) {
         event.preventDefault();
-        const token = localStorage.getItem('accessToken');
 
         const id = document.getElementById('roomId').value;
-        const roomNumber = document.getElementById('roomNumber').value;
-        const name = document.getElementById('name').value;
-        const type = document.getElementById('roomType').value;
-        const price = document.getElementById('price').value;
-        const status = document.getElementById('roomStatus').value;
+        const sel = document.getElementById('roomTypeSelect').value;
+
+        let roomType;
+        if (sel === 'new') {
+            roomType = {
+                typeName: document.getElementById('typeName').value,
+                description: document.getElementById('typeDescription').value,
+                price: parseFloat(document.getElementById('price').value),
+                capacity: parseInt(document.getElementById('capacity').value, 10),
+                amenities: document.getElementById('amenities').value
+            };
+        } else {
+            roomType = typesData.find(function (t) { return String(t.roomTypeId) === sel; });
+        }
 
         const payload = {
-            roomNumber: roomNumber,
-            name: name,
-            type: type,
-            price: parseFloat(price),
-            status: status
+            roomNumber: document.getElementById('roomNumber').value,
+            floor: parseInt(document.getElementById('floor').value, 10),
+            description: document.getElementById('description').value,
+            status: document.getElementById('roomStatus').value,
+            roomType: roomType
         };
 
         const isUpdate = id !== '';
-        const url = isUpdate ? `${ctx}/api/admin/rooms/${id}` : `${ctx}/api/admin/rooms`;
-        const method = isUpdate ? 'PUT' : 'POST';
+        if (isUpdate) payload.roomId = parseInt(id, 10);
 
-        fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            },
+        api(isUpdate ? '/api/rooms/' + id : '/api/rooms', {
+            method: isUpdate ? 'PUT' : 'POST',
             body: JSON.stringify(payload)
         })
-            .then(response => {
-                if (response.ok) {
-                    showAlert(isUpdate ? 'Room updated successfully.' : 'Room added successfully.', 'success');
-                    resetRoomForm();
-                    loadRooms();
-                } else {
-                    showAlert('Something went wrong. Please try again.', 'danger');
-                }
+            .then(function () {
+                showAlert(isUpdate ? 'Room updated successfully.' : 'Room added successfully.', 'success');
+                resetRoomForm();
+                loadRooms();
             })
-            .catch(error => {
+            .catch(function (error) {
                 console.error('Error saving room:', error);
-                showAlert('Something went wrong. Please try again.', 'danger');
+                showAlert('Could not save room: ' + escapeHtml(error.message), 'danger');
             });
     }
 
     function deleteRoom(id) {
         if (!confirm('Remove this room? This cannot be undone.')) return;
 
-        const token = localStorage.getItem('accessToken');
-
-        fetch(`${ctx}/api/admin/rooms/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': 'Bearer ' + token
-            }
-        })
-            .then(response => {
-                if (response.ok) {
-                    showAlert('Room removed successfully.', 'warning');
-                    loadRooms();
-                } else {
-                    showAlert('Cannot remove room with active bookings or something went wrong.', 'danger');
-                }
+        api('/api/rooms/' + id, { method: 'DELETE' })
+            .then(function () {
+                showAlert('Room removed successfully.', 'warning');
+                loadRooms();
             })
-            .catch(error => {
+            .catch(function (error) {
                 console.error('Error deleting room:', error);
-                showAlert('Something went wrong. Please try again.', 'danger');
+                showAlert('Could not remove room: ' + escapeHtml(error.message), 'danger');
             });
     }
 
+    // ---- Form helpers ----
     function editRoom(id) {
-        const room = roomsData.find(r => r.id === id);
+        const room = roomsData.find(function (r) { return r.roomId === id; });
         if (!room) return;
 
         document.getElementById('roomFormTitle').textContent = 'Edit room ' + room.roomNumber;
-        document.getElementById('roomId').value = room.id;
-        document.getElementById('roomNumber').value = room.roomNumber;
-        document.getElementById('name').value = room.name;
-        document.getElementById('roomType').value = room.type;
-        document.getElementById('price').value = room.price;
-        document.getElementById('roomStatus').value = room.status;
+        document.getElementById('roomId').value = room.roomId;
+        document.getElementById('roomNumber').value = room.roomNumber || '';
+        document.getElementById('floor').value = room.floor != null ? room.floor : '';
+        document.getElementById('description').value = room.description || '';
+        document.getElementById('roomStatus').value = room.status || 'AVAILABLE';
+        if (room.roomType && room.roomType.roomTypeId != null) {
+            document.getElementById('roomTypeSelect').value = String(room.roomType.roomTypeId);
+        }
+        toggleNewType();
         document.getElementById('roomFormSubmit').textContent = 'Save changes';
         document.getElementById('roomFormPanel').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function toggleNewType() {
+        const isNew = document.getElementById('roomTypeSelect').value === 'new';
+        document.getElementById('newTypeFields').classList.toggle('d-none', !isNew);
+        ['typeName', 'price', 'capacity'].forEach(function (f) {
+            document.getElementById(f).required = isNew;
+        });
     }
 
     function openRoomForm() {
@@ -344,31 +375,23 @@ JAVASCRIPT FETCH API INTEGRATION FOR ROOMS
         document.getElementById('roomId').value = '';
         document.getElementById('roomForm').reset();
         document.getElementById('roomFormSubmit').textContent = 'Add room';
+        buildTypes();
     }
 
     function resetFilters() {
         document.getElementById('filterForm').reset();
-        loadRooms();
+        applyFilters();
     }
 
     function showAlert(message, type) {
-        const alertContainer = document.getElementById('alertContainer');
-        alertContainer.innerHTML = `
-        <div class="alert alert-${type} alert-dismissible fade show mb-4" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>`;
-    }
-
-    function formatTypeLabel(type) {
-        if (type === 'POOL_VIEW') return 'Pool view';
-        if (type === 'CITY_VIEW') return 'City view';
-        if (type === 'FAMILY_SUITE') return 'Family suite';
-        return type || '';
+        document.getElementById('alertContainer').innerHTML =
+            '<div class="alert alert-' + type + ' alert-dismissible fade show mb-4" role="alert">' +
+            message +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
     }
 
     function escapeHtml(str) {
-        return String(str || '')
+        return String(str == null ? '' : str)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')

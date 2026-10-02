@@ -13,7 +13,9 @@ RUN mvn clean package -DskipTests -B
 # ជំហានទី ២: Run Application ជាមួយ Java 21 JRE Runtime
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/HotelReservationSystem.war app.war
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.war"]
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

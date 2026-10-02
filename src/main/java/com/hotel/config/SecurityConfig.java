@@ -1,5 +1,6 @@
 package com.hotel.config;
 
+import jakarta.servlet.DispatcherType;
 import com.hotel.security.JwtAccessDeniedHandler;
 import com.hotel.security.JwtAuthenticationEntryPoint;
 import com.hotel.security.JwtAuthenticationFilter;
@@ -65,9 +66,13 @@ public class SecurityConfig {
 
                 // កំណត់ URL Permissions
                 .authorizeHttpRequests(auth -> auth
-                        // Public Endpoints (Web Views, Static Assets, Auth APIs, និង Swagger Docs)
+                        // Allow internal JSP forwards and error pages
+                        .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
+
+                        // Public Endpoints
                         .requestMatchers(
                                 "/",
+                                "/error",
                                 "/login",
                                 "/register",
                                 "/rooms",
@@ -86,10 +91,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/reservations/**").hasAnyRole("CUSTOMER", "USER", "ADMIN")
                         .requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")
 
-                        // Any other requests must be authenticated with JWT
                         .anyRequest().authenticated()
                 );
-
         // បញ្ចូល JwtAuthenticationFilter ចូលទៅក្នុង Spring Security Filter Chain
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
