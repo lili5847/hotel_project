@@ -11,28 +11,28 @@
 <div class="admin-layout">
 
     <aside class="admin-sidebar">
-        <a href="${ctx}/admin/dashboard.jsp" class="admin-brand">
+        <a href="${ctx}/admin" class="admin-brand">
             <i class="bi bi-building"></i><span>Hotel Admin</span>
         </a>
 
         <nav class="admin-nav">
-            <a href="${ctx}/admin/dashboard.jsp"
-               class="admin-nav-link ${fn:contains(uri, '/admin/dashboard') ? 'active' : ''}">
-                <i class="bi bi-speedometer2"></i><span>Dashboard</span>
-            </a>
-            <a href="${ctx}/admin/reservations.jsp"
+            <a href="${ctx}/admin"
+			   class="admin-nav-link ${uri == ctx.concat('/admin') ? 'active' : ''}">
+			    <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+			</a>
+            <a href="${ctx}/admin/reservations"
                class="admin-nav-link ${fn:contains(uri, '/admin/reservations') ? 'active' : ''}">
                 <i class="bi bi-journal-check"></i><span>Reservations</span>
             </a>
-            <a href="${ctx}/admin/rooms.jsp"
+            <a href="${ctx}/admin/rooms"
                class="admin-nav-link ${fn:contains(uri, '/admin/rooms') ? 'active' : ''}">
                 <i class="bi bi-door-open"></i><span>Rooms</span>
             </a>
-            <a href="${ctx}/admin/room-types.jsp"
+            <a href="${ctx}/admin/room-types"
                class="admin-nav-link ${fn:contains(uri, '/admin/room-types') ? 'active' : ''}">
                 <i class="bi bi-tags"></i><span>Room types</span>
             </a>
-            <a href="${ctx}/admin/customers.jsp"
+            <a href="${ctx}/admin/customers"
                class="admin-nav-link ${fn:contains(uri, '/admin/customers') ? 'active' : ''}">
                 <i class="bi bi-people"></i><span>Customers</span>
             </a>

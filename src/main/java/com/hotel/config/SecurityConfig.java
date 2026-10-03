@@ -1,19 +1,22 @@
+
 package com.hotel.config;
 
 import jakarta.servlet.DispatcherType;
+
 import com.hotel.security.JwtAccessDeniedHandler;
 import com.hotel.security.JwtAuthenticationEntryPoint;
 import com.hotel.security.JwtAuthenticationFilter;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy; // 1. Import Lazy
+import org.springframework.context.annotation.Lazy;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,70 +35,62 @@ public class SecurityConfig {
     private JwtAccessDeniedHandler accessDeniedHandler;
 
     @Autowired
-    @Lazy // 2. បន្ថែម @Lazy ត្រង់នេះ ដើម្បីកាត់ផ្តាច់ Circular Dependency ជាមួយ JwtAuthenticationFilter
+    @Lazy
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    // ១. PasswordEncoder Bean
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration configuration)
+            throws Exception {
+
         return configuration.getAuthenticationManager();
     }
 
-    // ៣. Security Filter Chain Configuration
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
-                // បិទ CSRF សម្រាប់ REST APIs
-                .csrf(AbstractHttpConfigurer::disable)
+            .csrf(csrf -> csrf.disable())
 
-                // ដោះស្រាយ 401 Unauthorized និង 403 Forbidden សម្រាប់ JWT REST APIs
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler)
-                )
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler)
+            )
 
-                // កំណត់ Session ទៅជា STATELESS (មិនរក្សាទុក Session ក្នុង Server ឡើយ ប្រើ JWT សុទ្ធ)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+            )
 
-                // កំណត់ URL Permissions
-                .authorizeHttpRequests(auth -> auth
-                        // Allow internal JSP forwards and error pages
-                        .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
+            .authorizeHttpRequests(auth -> auth
 
-                        // Public Endpoints
-                        .requestMatchers(
-                                "/",
-                                "/error",
-                                "/login",
-                                "/register",
-                                "/rooms",
-                                "/room-detail",
-                                "/api/auth/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/css/**",
-                                "/js/**",
-                                "/images/**",
-                                "/webjars/**"
-                        ).permitAll()
+                // allow JSP forwards and error dispatches
+                .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR)
+                .permitAll()
 
-                        // Role-based Endpoints
-                        .requestMatchers("/api/reservations/**").hasAnyRole("CUSTOMER", "USER", "ADMIN")
-                        .requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")
+                .requestMatchers(
+                    "/", "/error", "/login", "/register", "/after-login",
+                    "/rooms", "/room-detail",
+                    "/css/**", "/js/**", "/images/**", "/webjars/**",
+                    "/api/auth/**", "/admin/**"
+                ).permitAll()
 
-                        .anyRequest().authenticated()
-                );
-        // បញ្ចូល JwtAuthenticationFilter ចូលទៅក្នុង Spring Security Filter Chain
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .requestMatchers("/api/**").authenticated()
+                .requestMatchers("/reservations/**").permitAll()
+                .anyRequest().authenticated()
+            );
+
+        http.addFilterBefore(
+            jwtAuthenticationFilter,
+            UsernamePasswordAuthenticationFilter.class
+        );
 
         return http.build();
     }
 }
+
+

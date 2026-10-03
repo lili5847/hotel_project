@@ -1,11 +1,9 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 
-<jsp:include page="/common/header.jsp">
+<jsp:include page="/WEB-INF/jsp/common/header.jsp">
     <jsp:param name="title" value="Reservations" />
 </jsp:include>
-<jsp:include page="/common/admin-sidebar.jsp" />
+<jsp:include page="/WEB-INF/jsp/common/admin-sidebar.jsp" />
 
 <!-- Dynamic Alert Container -->
 <div id="alertContainer"></div>
@@ -86,12 +84,13 @@
     </nav>
 </div>
 
-<jsp:include page="/common/admin-footer.jsp" />
+<jsp:include page="/WEB-INF/jsp/common/admin-footer.jsp" />
 
 <!-- ============================================================
 JAVASCRIPT FETCH API INTEGRATION FOR RESERVATIONS
 ============================================================ -->
 <script>
+	const ctx = '<%= request.getContextPath() %>';
     let currentPage = 1;
 
     document.addEventListener("DOMContentLoaded", function () {

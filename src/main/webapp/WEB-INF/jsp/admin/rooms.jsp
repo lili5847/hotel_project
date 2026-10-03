@@ -1,9 +1,9 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 
-<jsp:include page="/common/header.jsp">
+<jsp:include page="/WEB-INF/jsp/common/header.jsp">
     <jsp:param name="title" value="Rooms" />
 </jsp:include>
-<jsp:include page="/common/admin-sidebar.jsp" />
+<jsp:include page="/WEB-INF/jsp/common/admin-sidebar.jsp" />
 
 <div id="alertContainer"></div>
 
@@ -146,8 +146,7 @@
 
 </div>
 
-<jsp:include page="/common/admin-footer.jsp" />
-
+<jsp:include page="/WEB-INF/jsp/common/admin-footer.jsp" />
 <script>
     const ctx = '<%= request.getContextPath() %>';
     const token = localStorage.getItem('accessToken');

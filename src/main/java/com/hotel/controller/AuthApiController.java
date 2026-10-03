@@ -1,27 +1,31 @@
+
 package com.hotel.controller;
 
 import com.hotel.dto.ApiResponse;
 import com.hotel.dto.JwtAuthResponse;
 import com.hotel.dto.LoginRequest;
 import com.hotel.dto.RegisterRequest;
+import com.hotel.model.User;
+import com.hotel.repository.UserRepository;
 import com.hotel.security.JwtTokenProvider;
 import com.hotel.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -41,11 +45,15 @@ public class AuthApiController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private UserRepository userRepository;
+
 
     // ==========================================
     // REGISTER
     // POST /api/auth/register
     // ==========================================
+
     @PostMapping("/register")
     @Operation(
             summary = "Register User",
@@ -72,14 +80,18 @@ public class AuthApiController {
     // LOGIN
     // POST /api/auth/login
     // ==========================================
+
+
     @PostMapping("/login")
     @Operation(
             summary = "Login User",
             description = "Login ដើម្បីទទួលបាន JWT Bearer Token"
     )
     public ResponseEntity<ApiResponse<JwtAuthResponse>> login(
-            @Valid @RequestBody LoginRequest loginRequest) {
+            @Valid @RequestBody LoginRequest loginRequest,
+            HttpSession session) {
 
+        // Authenticate username/email + password
         Authentication authentication =
                 authenticationManager.authenticate(
                         new UsernamePasswordAuthenticationToken(
@@ -88,13 +100,41 @@ public class AuthApiController {
                         )
                 );
 
-        SecurityContextHolder
-                .getContext()
+        // Put authentication into SecurityContext
+        SecurityContextHolder.getContext()
                 .setAuthentication(authentication);
 
+        // Explicitly save SecurityContext into HTTP session
+        session.setAttribute(
+                "SPRING_SECURITY_CONTEXT",
+                SecurityContextHolder.getContext()
+        );
+
+        // Generate JWT
         String token =
                 tokenProvider.generateToken(authentication);
 
+        // Find user
+        String usernameOrEmail =
+                loginRequest.getUsernameOrEmail();
+
+        Optional<User> userOpt =
+                userRepository.findByUsername(usernameOrEmail);
+
+        if (userOpt.isEmpty()) {
+            userOpt =
+                    userRepository.findByEmail(usernameOrEmail);
+        }
+
+        User user =
+                userOpt.orElseThrow(() ->
+                        new RuntimeException("រកមិនឃើញ User!")
+                );
+
+        // Save application user into session
+        session.setAttribute("user", user);
+
+        // Return JWT
         JwtAuthResponse response =
                 new JwtAuthResponse(token);
 
@@ -105,4 +145,8 @@ public class AuthApiController {
                 )
         );
     }
+ 
+
 }
+
+

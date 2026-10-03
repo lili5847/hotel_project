@@ -12,6 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.hotel.model.User;
+import com.hotel.repository.UserRepository;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -26,6 +29,8 @@ public class ReservationRestController {
 
     @Autowired
     private ReservationService reservationService;
+    @Autowired
+    private UserRepository userRepository;
 
     // =====================================================
     // 1. CREATE RESERVATION
@@ -111,16 +116,21 @@ public class ReservationRestController {
             summary = "បោះបង់ការកក់បន្ទប់",
             description = "ប្តូរ Reservation status ទៅ CANCELLED"
     )
-    public ResponseEntity<ApiResponse<Void>> cancelReservation(
-            @PathVariable Integer id) {
+public ResponseEntity<ApiResponse<Void>> cancelReservation(
+        @PathVariable Integer id,
+        Authentication authentication) {
 
-        reservationService.cancelReservation(id);
+    String username = authentication.getName();
 
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        "បោះបង់ការកក់បន្ទប់ជោគជ័យ",
-                        null
-                )
-        );
-    }
+    User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new IllegalArgumentException("រកមិនឃើញ User!"));
+
+    Integer userId = Math.toIntExact(user.getUserId());
+
+    reservationService.cancelReservationByUserId(id, userId);
+
+    return ResponseEntity.ok(
+            ApiResponse.success("បោះបង់ការកក់បន្ទប់ជោគជ័យ", null)
+    );
+}
 }

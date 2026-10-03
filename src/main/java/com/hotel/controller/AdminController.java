@@ -1,13 +1,18 @@
 package com.hotel.controller;
 
 import com.hotel.model.Reservation;
+import com.hotel.model.User;
 import com.hotel.repository.ReservationRepository;
 import com.hotel.repository.RoomRepository;
-import com.hotel.service.ReservationService;
+import com.hotel.repository.UserRepository;
+
+import jakarta.servlet.http.HttpSession;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.List;
 
@@ -15,49 +20,164 @@ import java.util.List;
 @RequestMapping("/admin")
 public class AdminController {
 
-    @Autowired
-    private ReservationRepository reservationRepository;
 
-    @Autowired
-    private RoomRepository roomRepository;
+@Autowired
+private ReservationRepository reservationRepository;
 
-    @Autowired
-    private ReservationService reservationService;
+@Autowired
+private RoomRepository roomRepository;
 
-    // ១. បង្ហាញ Admin Dashboard ជាមួយ Statistic សង្ខេប
-    @GetMapping("/dashboard")
-    public String dashboard(Model model) {
-        long totalRooms = roomRepository.count();
-        long totalBookings = reservationRepository.count();
-        List<Reservation> recentReservations = reservationRepository.findAll();
+@Autowired
+private UserRepository userRepository;
 
-        model.addAttribute("totalRooms", totalRooms);
-        model.addAttribute("totalBookings", totalBookings);
-        model.addAttribute("reservations", recentReservations);
 
-        return "admin/dashboard.jsp";
+@GetMapping
+public String dashboard(
+        HttpSession session,
+        Model model) {
+
+    User loggedInUser =
+            (User) session.getAttribute("user");
+
+    if (loggedInUser == null) {
+        return "redirect:/login";
     }
 
-    // ២. បង្ហាញបញ្ជីកក់បន្ទប់ទាំងអស់ (Manage Reservations)
-    @GetMapping("/reservations")
-    public String listAllReservations(Model model) {
-        List<Reservation> reservations = reservationRepository.findAll();
-        model.addAttribute("reservations", reservations);
-        return "admin/reservations.jsp";
+    if (!isAdmin(loggedInUser)) {
+        return "redirect:/rooms";
     }
 
-    // ៣. ប្តូរស្ថានភាពការកក់ (ឧ. ពី PENDING ទៅ CONFIRMED)
-    @PostMapping("/reservations/update-status")
-    public String updateReservationStatus(
-            @RequestParam("bookingId") Integer bookingId,
-            @RequestParam("status") String status) {
+    List<Reservation> reservations =
+            reservationRepository.findAll();
 
-        Reservation reservation = reservationRepository.findById(bookingId).orElse(null);
-        if (reservation != null) {
-            reservation.setStatus(status);
-            reservationRepository.save(reservation);
-        }
+    long totalReservations =
+            reservations.size();
 
-        return "redirect:/admin/reservations";
-    }
+    long pendingReservations =
+            reservations.stream()
+                    .filter(r ->
+                            "PENDING".equalsIgnoreCase(
+                                    r.getStatus()
+                            ))
+                    .count();
+
+    long confirmedReservations =
+            reservations.stream()
+                    .filter(r ->
+                            "CONFIRMED".equalsIgnoreCase(
+                                    r.getStatus()
+                            ))
+                    .count();
+
+    long cancelledReservations =
+            reservations.stream()
+                    .filter(r ->
+                            "CANCELLED".equalsIgnoreCase(
+                                    r.getStatus()
+                            ))
+                    .count();
+
+    long totalRooms =
+            roomRepository.count();
+
+    long totalUsers =
+            userRepository.count();
+
+    model.addAttribute(
+            "totalReservations",
+            totalReservations
+    );
+
+    model.addAttribute(
+            "pendingReservations",
+            pendingReservations
+    );
+
+    model.addAttribute(
+            "confirmedReservations",
+            confirmedReservations
+    );
+
+    model.addAttribute(
+            "cancelledReservations",
+            cancelledReservations
+    );
+
+    model.addAttribute(
+            "totalRooms",
+            totalRooms
+    );
+
+    model.addAttribute(
+            "totalUsers",
+            totalUsers
+    );
+
+    return "admin/dashboard";
 }
+
+
+@GetMapping("/reservations")
+public String reservations(
+        HttpSession session,
+        Model model) {
+
+    User loggedInUser =
+            (User) session.getAttribute("user");
+
+    if (loggedInUser == null) {
+        return "redirect:/login";
+    }
+
+    if (!isAdmin(loggedInUser)) {
+        return "redirect:/rooms";
+    }
+
+    List<Reservation> reservations =
+            reservationRepository.findAll();
+
+    model.addAttribute(
+            "reservations",
+            reservations
+    );
+
+    return "admin/reservations";
+}
+
+@GetMapping("/rooms")
+public String rooms(HttpSession session) {
+    User u = (User) session.getAttribute("user");
+    if (u == null) return "redirect:/login";
+    if (!isAdmin(u)) return "redirect:/rooms";
+    return "admin/rooms";
+}
+
+private boolean isAdmin(User user) {
+
+
+if (user == null) {
+    return false;
+}
+
+// Check the role column in users table
+if ("ADMIN".equalsIgnoreCase(user.getRole())
+        || "ROLE_ADMIN".equalsIgnoreCase(user.getRole())) {
+    return true;
+}
+
+// Also check the user_roles relationship
+if (user.getRoles() != null) {
+
+    return user.getRoles()
+            .stream()
+            .anyMatch(role ->
+                    "ADMIN".equalsIgnoreCase(role.getName())
+                            || "ROLE_ADMIN".equalsIgnoreCase(role.getName())
+            );
+}
+
+return false;
+
+}
+}
+

@@ -28,312 +28,161 @@ public class ReservationService {
     @Autowired
     private CustomerRepository customerRepository;
 
-
-    // =====================================================
-    // 1. CREATE RESERVATION
-    // POST /api/reservations
-    // =====================================================
-
     @Transactional
     public Reservation createReservation(ReservationRequest request) {
 
-        // -------------------------------------------------
-        // Validate request
-        // -------------------------------------------------
-
         if (request == null) {
-            throw new IllegalArgumentException(
-                    "Reservation request មិនអាចទទេបានទេ!"
-            );
+            throw new IllegalArgumentException("Reservation request មិនអាចទទេបានទេ!");
         }
 
         Integer userId = request.getUserId();
         Integer roomId = request.getRoomId();
-
         LocalDate checkIn = request.getCheckInDate();
         LocalDate checkOut = request.getCheckOutDate();
-
-
-        // -------------------------------------------------
-        // Validate IDs
-        // -------------------------------------------------
+        Integer guests = request.getGuests();
 
         if (userId == null) {
-            throw new IllegalArgumentException(
-                    "User ID ត្រូវតែមាន!"
-            );
+            throw new IllegalArgumentException("User ID ត្រូវតែមាន!");
         }
 
         if (roomId == null) {
-            throw new IllegalArgumentException(
-                    "Room ID ត្រូវតែមាន!"
-            );
+            throw new IllegalArgumentException("Room ID ត្រូវតែមាន!");
         }
 
-
-        // -------------------------------------------------
-        // Validate dates
-        // -------------------------------------------------
-
         if (checkIn == null || checkOut == null) {
-            throw new IllegalArgumentException(
-                    "Check-in និង Check-out ត្រូវតែមាន!"
-            );
+            throw new IllegalArgumentException("Check-in និង Check-out ត្រូវតែមាន!");
         }
 
         if (!checkOut.isAfter(checkIn)) {
-            throw new IllegalArgumentException(
-                    "Check-out ត្រូវតែធំជាង Check-in!"
-            );
+            throw new IllegalArgumentException("Check-out ត្រូវតែធំជាង Check-in!");
         }
-
-
-        // -------------------------------------------------
-        // Find Customer by User ID
-        // -------------------------------------------------
 
         Customer customer = customerRepository
                 .findByUserUserId(userId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "រកមិនឃើញ Customer សម្រាប់ User ID: "
-                                        + userId
-                        )
-                );
-
-
-        // -------------------------------------------------
-        // Find Room
-        // -------------------------------------------------
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "រកមិនឃើញ Customer សម្រាប់ User ID: " + userId));
 
         Room room = roomRepository
                 .findById(roomId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "រកមិនឃើញបន្ទប់ ID: "
-                                        + roomId
-                        )
-                );
-
-
-        // -------------------------------------------------
-        // Check Room Type
-        // -------------------------------------------------
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "រកមិនឃើញបន្ទប់ ID: " + roomId));
 
         if (room.getRoomType() == null) {
-            throw new IllegalArgumentException(
-                    "បន្ទប់នេះមិនទាន់មាន Room Type!"
-            );
+            throw new IllegalArgumentException("បន្ទប់នេះមិនទាន់មាន Room Type!");
         }
 
         if (room.getRoomType().getPrice() == null) {
-            throw new IllegalArgumentException(
-                    "Room Type នេះមិនទាន់មានតម្លៃ!"
-            );
+            throw new IllegalArgumentException("Room Type នេះមិនទាន់មានតម្លៃ!");
         }
 
-
-        // -------------------------------------------------
-        // Check Room Status
-        // -------------------------------------------------
-
-        if (room.getStatus() != null
-                && room.getStatus().equalsIgnoreCase("BOOKED")) {
-
-            throw new IllegalArgumentException(
-                    "បន្ទប់នេះកំពុងត្រូវបានកក់!"
-            );
+        if (guests == null || guests < 1) {
+            throw new IllegalArgumentException("ចំនួនភ្ញៀវត្រូវតែយ៉ាងហោចណាស់ 1 នាក់!");
         }
 
+        Integer capacity = room.getRoomType().getCapacity();
 
-        // -------------------------------------------------
-        // Check Date Overlap
-        // -------------------------------------------------
+        if (capacity != null && guests > capacity) {
+            throw new IllegalArgumentException(
+                    "ចំនួនភ្ញៀវលើសពីសមត្ថភាពបន្ទប់។ អតិបរមា " + capacity + " នាក់!");
+        }
 
-        boolean booked =
-                reservationRepository.isRoomBookedOverlap(
-                        roomId,
-                        checkIn,
-                        checkOut
-                );
+        boolean booked = reservationRepository.isRoomBookedOverlap(roomId, checkIn, checkOut);
 
         if (booked) {
-            throw new IllegalArgumentException(
-                    "បន្ទប់នេះត្រូវបានកក់រួចហើយសម្រាប់កាលបរិច្ឆេទនេះ!"
-            );
+            throw new IllegalArgumentException("បន្ទប់នេះត្រូវបានកក់រួចហើយសម្រាប់កាលបរិច្ឆេទនេះ!");
         }
 
-
-        // -------------------------------------------------
-        // Calculate Nights
-        // -------------------------------------------------
-
-        long nights = ChronoUnit.DAYS.between(
-                checkIn,
-                checkOut
-        );
+        long nights = ChronoUnit.DAYS.between(checkIn, checkOut);
 
         if (nights <= 0) {
-            throw new IllegalArgumentException(
-                    "ចំនួនថ្ងៃស្នាក់នៅមិនត្រឹមត្រូវ!"
-            );
+            throw new IllegalArgumentException("ចំនួនថ្ងៃស្នាក់នៅមិនត្រឹមត្រូវ!");
         }
 
+        Double pricePerNight = room.getRoomType().getPrice();
+        Double totalAmount = nights * pricePerNight;
 
-        // -------------------------------------------------
-        // Calculate Total Amount
-        // -------------------------------------------------
-
-        Double pricePerNight =
-                room.getRoomType().getPrice();
-
-        Double totalAmount =
-                nights * pricePerNight;
-
-
-        // -------------------------------------------------
-        // Create Reservation
-        // -------------------------------------------------
-
-        Reservation reservation =
-                new Reservation();
-
+        Reservation reservation = new Reservation();
         reservation.setCustomer(customer);
         reservation.setRoom(room);
         reservation.setCheckIn(checkIn);
         reservation.setCheckOut(checkOut);
+        reservation.setGuests(guests);
         reservation.setTotalAmount(totalAmount);
-
-        // ReservationRequest មិនមាន guests
-        // ដូច្នេះមិន set guests នៅទីនេះទេ
-
         reservation.setStatus("PENDING");
 
-
-        // -------------------------------------------------
-        // Update Room Status
-        // -------------------------------------------------
-
-        room.setStatus("BOOKED");
-
-        roomRepository.save(room);
-
-
-        // -------------------------------------------------
-        // Save Reservation
-        // -------------------------------------------------
-
-        return reservationRepository.save(
-                reservation
-        );
+        return reservationRepository.save(reservation);
     }
 
-
-    // =====================================================
-    // 2. GET ALL RESERVATIONS
-    // GET /api/reservations
-    // =====================================================
-
     public List<Reservation> getAllReservations() {
-
         return reservationRepository.findAll();
     }
 
-
-    // =====================================================
-    // 3. GET RESERVATIONS BY CUSTOMER
-    // =====================================================
-
-    public List<Reservation> getReservationsByCustomer(
-            Integer customerId) {
-
-        return reservationRepository
-                .findByCustomerCustId(customerId);
+    public List<Reservation> getReservationsByCustomer(Integer customerId) {
+        return reservationRepository.findByCustomerCustId(customerId);
     }
 
-
-    // =====================================================
-    // 4. GET RESERVATIONS BY USER ID
-    // GET /api/reservations/user/{userId}
-    // =====================================================
-
-    public List<Reservation> getReservationsByUserId(
-            Long userId) {
+    public List<Reservation> getReservationsByUserId(Long userId) {
 
         if (userId == null) {
-            throw new IllegalArgumentException(
-                    "User ID មិនអាចទទេបានទេ!"
-            );
+            throw new IllegalArgumentException("User ID មិនអាចទទេបានទេ!");
         }
 
         Customer customer = customerRepository
                 .findByUserUserId(userId.intValue())
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "រកមិនឃើញ Customer សម្រាប់ User ID: "
-                                        + userId
-                        )
-                );
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "រកមិនឃើញ Customer សម្រាប់ User ID: " + userId));
 
-        return reservationRepository
-                .findByCustomerCustId(
-                        customer.getCustId()
-                );
+        return reservationRepository.findByCustomerCustId(customer.getCustId());
     }
 
-
-    // =====================================================
-    // 5. CANCEL RESERVATION
-    // DELETE /api/reservations/{id}
-    // =====================================================
-
+    /**
+     * Cancel a reservation only when it belongs to the specified customer.
+     */
     @Transactional
-    public void cancelReservation(
-            Integer bookingId) {
+    public void cancelReservation(Integer bookingId, Integer customerId) {
 
-        // -------------------------------------------------
-        // Find Reservation
-        // -------------------------------------------------
-
-        Reservation reservation =
-                reservationRepository
-                        .findById(bookingId)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "រកមិនឃើញការកក់ ID: "
-                                                + bookingId
-                                )
-                        );
-
-
-        // -------------------------------------------------
-        // Change Reservation Status
-        // -------------------------------------------------
-
-        reservation.setStatus("CANCELLED");
-
-
-        // -------------------------------------------------
-        // Make Room Available Again
-        // -------------------------------------------------
-
-        Room room =
-                reservation.getRoom();
-
-        if (room != null) {
-
-            room.setStatus("AVAILABLE");
-
-            roomRepository.save(room);
+        if (bookingId == null) {
+            throw new IllegalArgumentException("Booking ID ត្រូវតែមាន!");
         }
 
+        if (customerId == null) {
+            throw new IllegalArgumentException("Customer ID ត្រូវតែមាន!");
+        }
 
-        // -------------------------------------------------
-        // Save Reservation
-        // -------------------------------------------------
+        Reservation reservation = reservationRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "រកមិនឃើញការកក់ ID: " + bookingId));
 
-        reservationRepository.save(
-                reservation
-        );
+        if (reservation.getCustomer() == null
+                || reservation.getCustomer().getCustId() == null
+                || !reservation.getCustomer().getCustId().equals(customerId)) {
+            throw new IllegalArgumentException("អ្នកមិនមានសិទ្ធិលុបការកក់នេះទេ!");
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(reservation.getStatus())) {
+            throw new IllegalArgumentException("ការកក់នេះត្រូវបានលុបរួចហើយ!");
+        }
+
+        reservation.setStatus("CANCELLED");
+        reservationRepository.save(reservation);
+    }
+
+    /**
+     * Cancel a reservation using the logged-in user's ID.
+     */
+    @Transactional
+    public void cancelReservationByUserId(Integer bookingId, Integer userId) {
+
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID ត្រូវតែមាន!");
+        }
+
+        Customer customer = customerRepository
+                .findByUserUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "រកមិនឃើញ Customer សម្រាប់ User ID: " + userId));
+
+        cancelReservation(bookingId, customer.getCustId());
     }
 }

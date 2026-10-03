@@ -2,11 +2,10 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <c:set var="ctx" value="${pageContext.request.contextPath}" />
 
-<jsp:include page="/common/header.jsp">
+<jsp:include page="/WEB-INF/jsp/common/header.jsp">
     <jsp:param name="title" value="Room types" />
 </jsp:include>
-<jsp:include page="/common/admin-sidebar.jsp" />
-
+<jsp:include page="/WEB-INF/jsp/common/admin-sidebar.jsp" />
 <!-- Dynamic Alert Container -->
 <div id="alertContainer"></div>
 
@@ -92,7 +91,7 @@ JAVASCRIPT FETCH API INTEGRATION FOR ROOM TYPES
             <div class="col-lg-4">
                 <div class="panel h-100">
                     <div class="panel-header">
-                        <h2 class="h6 mb-0">${escapeHtml(rt.label || rt.name || '')}</h2>
+                        <h2 class="h6 mb-0">\${escapeHtml(rt.label || rt.name || '')}</h2>
                         <span class="small text-body-secondary">
                             ${activeCount} room(s)
                         </span>
@@ -110,13 +109,13 @@ JAVASCRIPT FETCH API INTEGRATION FOR ROOM TYPES
 
                         <div class="mb-3">
                             <label class="form-label small fw-medium">Description</label>
-                            <textarea class="form-control" id="description_${rt.id}" rows="4" required>${escapeHtml(rt.description || '')}</textarea>
+                            <textarea class="form-control" id="description_${rt.id}" rows="4" required>\${escapeHtml(rt.description || '')}</textarea>
                         </div>
 
                         <div class="mb-4">
                             <label class="form-label small fw-medium">Amenities</label>
                             <textarea class="form-control" id="amenitiesCsv_${rt.id}" rows="3"
-                                      placeholder="Free Wi-Fi, Air conditioning, Mini bar">${escapeHtml(amenities)}</textarea>
+                                      placeholder="Free Wi-Fi, Air conditioning, Mini bar">\\${escapeHtml(amenities)}</textarea>
                             <div class="form-text">Comma-separated. Shown on the room details page.</div>
                         </div>
 

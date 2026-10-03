@@ -16,6 +16,3 @@ WORKDIR /app
 COPY --from=build /app/target/HotelReservationSystem.war app.war
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.war"]
-
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
