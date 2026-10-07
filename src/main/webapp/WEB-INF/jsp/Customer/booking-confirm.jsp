@@ -1,246 +1,602 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<c:set var="ctx" value="${pageContext.request.contextPath}" />
 
-<%-- ============================================================
-     BACKEND 0: ENTRY POINT
-     Reached only after BookingServlet.doPost() (from room-details.jsp)
-     validates availability and stores a pending booking, then forwards
-     here (not a redirect, since the pending booking is request-scoped
-     or session-scoped and doesn't need to survive a fresh GET).
+<!DOCTYPE html>
+<html lang="en">
 
-     Also protect this page with AuthFilter — an unauthenticated user
-     should never reach it directly by typing the URL.
+<head>
 
-     Required request attributes, all set by BookingServlet before
-     forwarding:
-       "room"    : same shape as in room-details.jsp — getId(),
-                   getName(), getTypeLabel(), getImages(), getPrice()
-       "booking" : a draft/pending object exposing getCheckIn(),
-                   getCheckOut(), getNights(), getGuests(), getBedOption()
-       "pricing" : exposing getNightlyRate(), getSubtotal(), getTaxes(),
-                   getTotal() — the AUTHORITATIVE total, recalculated
-                   server-side (never trust the JS estimate shown on
-                   room-details.jsp)
-       "bookingToken" : a one-time hidden token (session-bound random
-                   string) so the confirm POST below can't be replayed
-                   or forged from outside this page
-     If "room" or "booking" is missing (e.g. someone bookmarks this
-     URL), redirect back to /rooms before rendering anything past
-     this comment.
-     ============================================================ --%>
+    <meta charset="UTF-8">
 
-<jsp:include page="/common/header.jsp">
-    <jsp:param name="title" value="Confirm your reservation" />
-</jsp:include>
-<jsp:include page="/common/navbar.jsp" />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-<main class="flex-grow-1 py-4">
-    <div class="container" style="max-width: 48rem;">
+    <title>Book Room - Hotel Reservation</title>
 
-        <nav class="small mb-3" aria-label="breadcrumb">
-            <a href="${ctx}/rooms?id=${room.id}" class="text-decoration-none">
-                <i class="bi bi-arrow-left me-1"></i>Back to room
-            </a>
-        </nav>
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
 
-        <h1 class="h3 mb-4">Confirm your reservation</h1>
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        rel="stylesheet">
 
-        <%-- Error Banner --%>
-        <div id="errorBanner" class="alert alert-danger ${empty error ? 'd-none' : ''}" role="alert">
-            <span id="errorMessage"><c:out value="${error}" /></span>
+    <style>
+
+        body {
+            background: #f5f7fa;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #0d6efd, #084298);
+            color: white;
+            padding: 45px 0;
+        }
+
+        .booking-card {
+            background: white;
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .room-image {
+            width: 100%;
+            height: 320px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .room-image-placeholder {
+            height: 320px;
+            background: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 5rem;
+        }
+
+        .summary-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .summary-value {
+            font-weight: 600;
+        }
+
+        .total-price {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0d6efd;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<%
+    String ctx = request.getContextPath();
+%>
+
+<!-- NAVBAR -->
+
+<nav class="navbar navbar-expand-lg bg-white shadow-sm">
+
+    <div class="container">
+
+        <a class="navbar-brand fw-bold text-primary"
+           href="<%= ctx %>/rooms">
+
+            <i class="bi bi-building me-2"></i>
+            Hotel Reservation
+
+        </a>
+
+        <button class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarNav">
+
+            <span class="navbar-toggler-icon"></span>
+
+        </button>
+
+        <div class="collapse navbar-collapse"
+             id="navbarNav">
+
+            <ul class="navbar-nav ms-auto">
+
+                <li class="nav-item">
+
+                    <a class="nav-link"
+                       href="<%= ctx %>/rooms">
+
+                        <i class="bi bi-house me-1"></i>
+                        Rooms
+
+                    </a>
+
+                </li>
+
+                <li class="nav-item">
+
+                    <a class="nav-link"
+                       href="<%= ctx %>/reservations/my-bookings">
+
+                        <i class="bi bi-calendar-check me-1"></i>
+                        My Bookings
+
+                    </a>
+
+                </li>
+
+                <li class="nav-item">
+
+                    <a class="nav-link"
+                       href="<%= ctx %>/login">
+
+                        <i class="bi bi-box-arrow-right me-1"></i>
+                        Login
+
+                    </a>
+
+                </li>
+
+            </ul>
+
         </div>
-
-        <div class="panel mb-4">
-            <div class="panel-header">
-                <h2 class="h6 mb-0">Room</h2>
-            </div>
-            <div class="p-3 d-flex gap-3 align-items-center">
-                <%-- BACKEND: room.images[0], same as room-details.jsp gallery source --%>
-                <c:url var="thumbUrl" value="/assets/img/${room.images[0]}" />
-                <img id="roomThumb" src="${thumbUrl}" alt="${room.name}" class="confirm-thumb" onerror="this.remove()">
-                <div>
-                    <span id="roomTypeBadge" class="badge room-type-badge mb-1"><c:out value="${room.typeLabel}" /></span>
-                    <div id="roomName" class="fw-semibold"><c:out value="${room.name}" /></div>
-                    <div class="small text-body-secondary">&#36;<span id="roomPrice"><c:out value="${room.price}" /></span> / night</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel mb-4">
-            <div class="panel-header">
-                <h2 class="h6 mb-0">Stay details</h2>
-            </div>
-            <%-- BACKEND: everything in this block reads from "booking" --%>
-            <div class="p-3">
-                <div class="row g-3">
-                    <div class="col-6 col-md-3">
-                        <div class="small text-body-secondary">Check-in</div>
-                        <div id="checkInDate" class="fw-medium"><c:out value="${booking.checkIn}" /></div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="small text-body-secondary">Check-out</div>
-                        <div id="checkOutDate" class="fw-medium"><c:out value="${booking.checkOut}" /></div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="small text-body-secondary">Guests</div>
-                        <div id="guestCount" class="fw-medium"><c:out value="${booking.guests}" /></div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="small text-body-secondary">Bed type</div>
-                        <div id="bedOption" class="fw-medium"><c:out value="${booking.bedOption}" /></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <%-- GUEST INFO --%>
-        <div class="panel mb-4">
-            <div class="panel-header">
-                <h2 class="h6 mb-0">Booking under</h2>
-            </div>
-            <div class="p-3">
-                <div id="guestFullName" class="fw-medium"><c:out value="${sessionScope.user.fullName}" /></div>
-                <div id="guestEmail" class="small text-body-secondary"><c:out value="${sessionScope.user.email}" /></div>
-            </div>
-        </div>
-
-        <%-- PRICE BREAKDOWN --%>
-        <div class="panel mb-4">
-            <div class="panel-header">
-                <h2 class="h6 mb-0">Price summary</h2>
-            </div>
-            <div class="p-3">
-                <div class="d-flex justify-content-between small mb-2">
-                    <span><span id="bookingNights"><c:out value="${booking.nights}" /></span> night(s) &times; &#36;<span id="nightlyRate"><c:out value="${pricing.nightlyRate}" /></span></span>
-                    <span>&#36;<span id="pricingSubtotal"><c:out value="${pricing.subtotal}" /></span></span>
-                </div>
-                <div class="d-flex justify-content-between small mb-2 text-body-secondary">
-                    <span>Taxes and fees</span>
-                    <span>&#36;<span id="pricingTaxes"><c:out value="${pricing.taxes}" /></span></span>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between fw-semibold fs-5">
-                    <span>Total</span>
-                    <span>&#36;<span id="pricingTotal"><c:out value="${pricing.total}" /></span></span>
-                </div>
-            </div>
-        </div>
-
-        <%-- CONFIRM SUBMIT FORM WITH FETCH API INTEGRATION --%>
-        <form id="confirmBookingForm" action="${ctx}/booking/confirm" method="post" onsubmit="handleConfirmBooking(event)" class="d-flex flex-column flex-sm-row gap-2 justify-content-end">
-            <input type="hidden" id="bookingTokenInput" name="bookingToken" value="${bookingToken}">
-            <a href="${ctx}/rooms?id=${room.id}" class="btn btn-outline-secondary order-2 order-sm-1">Cancel</a>
-            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg order-1 order-sm-2">
-                <i class="bi bi-check2-circle me-1"></i>Confirm reservation
-            </button>
-        </form>
 
     </div>
-</main>
 
-<!-- ============================================================
-JAVASCRIPT FETCH API INTEGRATION FOR SPRING BOOT BACKEND
-============================================================ -->
+</nav>
+
+
+<!-- HEADER -->
+
+<section class="page-header">
+
+    <div class="container">
+
+        <h1 class="fw-bold mb-2">
+
+            <i class="bi bi-calendar-plus me-2"></i>
+            Book Your Room
+
+        </h1>
+
+        <p class="mb-0 opacity-75">
+
+            Complete the information below to make your reservation.
+
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- CONTENT -->
+
+<div class="container py-5">
+
+    <c:if test="${not empty error}">
+
+        <div class="alert alert-danger">
+
+            <i class="bi bi-exclamation-triangle me-2"></i>
+
+            ${error}
+
+        </div>
+
+    </c:if>
+
+
+    <c:choose>
+
+        <c:when test="${not empty room}">
+
+            <div class="row g-4">
+
+                <!-- ROOM INFORMATION -->
+
+                <div class="col-lg-6">
+
+                    <div class="booking-card">
+
+                        <c:choose>
+
+                            <c:when test="${not empty room.roomType
+                                           and not empty room.roomType.imageUrl}">
+
+                                <img
+                                    src="<%= ctx %>${room.roomType.imageUrl}"
+                                    alt="Room ${room.roomNumber}"
+                                    class="room-image">
+
+                            </c:when>
+
+                            <c:otherwise>
+
+                                <div class="room-image-placeholder">
+
+                                    <i class="bi bi-door-open"></i>
+
+                                </div>
+
+                            </c:otherwise>
+
+                        </c:choose>
+
+
+                        <div class="p-4">
+
+                            <span class="badge bg-primary mb-2">
+
+                                ${room.roomType.typeName}
+
+                            </span>
+
+                            <h3 class="fw-bold">
+
+                                Room ${room.roomNumber}
+
+                            </h3>
+
+                            <p class="text-muted mb-3">
+
+                                ${room.description}
+
+                            </p>
+
+
+                            <div class="row g-3">
+
+                                <div class="col-6">
+
+                                    <div class="summary-label">
+
+                                        <i class="bi bi-building me-1"></i>
+                                        Floor
+
+                                    </div>
+
+                                    <div class="summary-value">
+
+                                        ${room.floor}
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="col-6">
+
+                                    <div class="summary-label">
+
+                                        <i class="bi bi-cash-stack me-1"></i>
+                                        Price / Night
+
+                                    </div>
+
+                                    <div class="summary-value text-primary">
+
+                                        $${room.roomType.price}
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="col-12">
+
+                                    <div class="summary-label">
+
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Status
+
+                                    </div>
+
+                                    <div class="summary-value">
+
+                                        ${room.status}
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- BOOKING FORM -->
+
+                <div class="col-lg-6">
+
+                    <div class="booking-card">
+
+                        <div class="p-4">
+
+                            <h3 class="fw-bold mb-4">
+
+                                Reservation Details
+
+                            </h3>
+
+
+                            <form
+                                method="post"
+                                action="<%= ctx %>/reservations/book">
+
+
+                                <input
+                                    type="hidden"
+                                    name="roomId"
+                                    value="${room.roomId}">
+
+
+                                <!-- CHECK IN -->
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="checkIn"
+                                        class="form-label fw-semibold">
+
+                                        Check-in Date
+
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        class="form-control"
+                                        id="checkIn"
+                                        name="checkIn"
+                                        required>
+
+                                </div>
+
+
+                                <!-- CHECK OUT -->
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="checkOut"
+                                        class="form-label fw-semibold">
+
+                                        Check-out Date
+
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        class="form-control"
+                                        id="checkOut"
+                                        name="checkOut"
+                                        required>
+
+                                </div>
+
+
+                                <!-- GUESTS -->
+
+                                <div class="mb-4">
+
+                                    <label
+                                        for="guests"
+                                        class="form-label fw-semibold">
+
+                                        Number of Guests
+
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="guests"
+                                        name="guests"
+                                        min="1"
+                                        max="10"
+                                        value="1"
+                                        required>
+
+                                </div>
+
+
+                                <!-- PRICE -->
+
+                                <div class="border-top pt-3 mb-4">
+
+                                    <div class="d-flex justify-content-between mb-2">
+
+                                        <span class="text-muted">
+
+                                            Price per night
+
+                                        </span>
+
+                                        <strong>
+
+                                            $${room.roomType.price}
+
+                                        </strong>
+
+                                    </div>
+
+                                    <div class="d-flex justify-content-between mb-2">
+
+                                        <span class="text-muted">
+
+                                            Nights
+
+                                        </span>
+
+                                        <strong id="nights">
+
+                                            0
+
+                                        </strong>
+
+                                    </div>
+
+                                    <div class="d-flex justify-content-between">
+
+                                        <span class="fw-semibold">
+
+                                            Estimated Total
+
+                                        </span>
+
+                                        <span
+                                            class="total-price">
+
+                                            $<span id="total">0.00</span>
+
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- BUTTONS -->
+
+                                <div class="d-flex gap-2">
+
+                                    <a
+                                        href="<%= ctx %>/room-detail?id=${room.roomId}"
+                                        class="btn btn-outline-secondary flex-fill">
+
+                                        <i class="bi bi-arrow-left me-1"></i>
+                                        Back
+
+                                    </a>
+
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary flex-fill">
+
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Confirm Booking
+
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </c:when>
+
+
+        <c:otherwise>
+
+            <div class="alert alert-warning">
+
+                <i class="bi bi-exclamation-triangle me-2"></i>
+
+                Room information could not be found.
+
+                <a
+                    href="<%= ctx %>/rooms"
+                    class="alert-link">
+
+                    Return to rooms
+
+                </a>
+
+            </div>
+
+        </c:otherwise>
+
+    </c:choose>
+
+</div>
+
+
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        fetchDraftBookingDetails();
-    });
 
-    function fetchDraftBookingDetails() {
-        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-        const bookingToken = document.getElementById('bookingTokenInput').value;
+    const checkIn = document.getElementById("checkIn");
+    const checkOut = document.getElementById("checkOut");
+    const nightsElement = document.getElementById("nights");
+    const totalElement = document.getElementById("total");
 
-        if (!token || !bookingToken) return;
+    const pricePerNight =
+        Number("${room.roomType.price}") || 0;
 
-        fetch('${ctx}/api/booking/details?bookingToken=' + encodeURIComponent(bookingToken), {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            }
-        })
-            .then(response => {
-                if (response.ok) return response.json();
-                throw new Error('Unable to retrieve pending booking details');
-            })
-            .then(data => {
-                if (data) {
-                    // Update UI elements dynamically from Spring Boot response
-                    if (data.room) {
-                        document.getElementById('roomName').textContent = data.room.name;
-                        document.getElementById('roomPrice').textContent = data.room.price;
-                        document.getElementById('roomTypeBadge').textContent = data.room.typeLabel;
-                    }
-                    if (data.booking) {
-                        document.getElementById('checkInDate').textContent = data.booking.checkIn;
-                        document.getElementById('checkOutDate').textContent = data.booking.checkOut;
-                        document.getElementById('guestCount').textContent = data.booking.guests;
-                        document.getElementById('bedOption').textContent = data.booking.bedOption;
-                        document.getElementById('bookingNights').textContent = data.booking.nights;
-                    }
-                    if (data.pricing) {
-                        document.getElementById('nightlyRate').textContent = data.pricing.nightlyRate;
-                        document.getElementById('pricingSubtotal').textContent = data.pricing.subtotal;
-                        document.getElementById('pricingTaxes').textContent = data.pricing.taxes;
-                        document.getElementById('pricingTotal').textContent = data.pricing.total;
-                    }
-                    if (data.user) {
-                        document.getElementById('guestFullName').textContent = data.user.fullName;
-                        document.getElementById('guestEmail').textContent = data.user.email;
-                    }
-                }
-            })
-            .catch(error => {
-                console.warn('Draft booking fetch skipped/failed:', error);
-            });
+
+    function calculateTotal() {
+
+        if (!checkIn || !checkOut) {
+            return;
+        }
+
+        const start = new Date(checkIn.value);
+        const end = new Date(checkOut.value);
+
+        if (!checkIn.value || !checkOut.value || end <= start) {
+
+            nightsElement.textContent = "0";
+            totalElement.textContent = "0.00";
+
+            return;
+        }
+
+        const difference =
+            end.getTime() - start.getTime();
+
+        const nights =
+            Math.ceil(difference / (1000 * 60 * 60 * 24));
+
+        nightsElement.textContent = nights;
+
+        totalElement.textContent =
+            (nights * pricePerNight).toFixed(2);
     }
 
-    function handleConfirmBooking(event) {
-        event.preventDefault();
 
-        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-        const bookingToken = document.getElementById('bookingTokenInput').value;
-        const submitBtn = document.getElementById('submitBtn');
-        const errorBanner = document.getElementById('errorBanner');
-        const errorMessage = document.getElementById('errorMessage');
+    if (checkIn && checkOut) {
 
-        // Show loading state
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
-        errorBanner.classList.add('d-none');
+        checkIn.addEventListener(
+            "change",
+            calculateTotal
+        );
 
-        fetch('${ctx}/api/booking/confirm', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify({
-                bookingToken: bookingToken
-            })
-        })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                }
-                return response.json().then(err => {
-                    throw new Error(err.message || 'Booking confirmation failed');
-                });
-            })
-            .then(data => {
-                // Redirect on success to my reservations page
-                window.location.href = '${ctx}/reservations?flash=booked';
-            })
-            .catch(error => {
-                // Reset button and show error
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Confirm reservation';
+        checkOut.addEventListener(
+            "change",
+            calculateTotal
+        );
 
-                errorMessage.textContent = error.message || 'An error occurred during booking confirmation. Please try again.';
-                errorBanner.classList.remove('d-none');
-            });
     }
+
 </script>
 
-<jsp:include page="/common/footer.jsp" />
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+</script>
+
+</body>
+
+</html>
+

@@ -1,3 +1,4 @@
+
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 
@@ -33,9 +34,16 @@
             align-items: center;
             justify-content: center;
             border-radius: 15px;
+            overflow: hidden;
         }
 
-        .room-image i {
+        .room-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .room-image-placeholder {
             font-size: 100px;
             color: #6c757d;
         }
@@ -66,59 +74,121 @@
 
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+
+<nav class="navbar navbar-expand-lg bg-white border-bottom">
+
     <div class="container">
 
-        <a class="navbar-brand" href="${pageContext.request.contextPath}/">
-            <i class="bi bi-building"></i>
+        <a class="navbar-brand"
+           href="${ctx}/">
+
+            <i class="bi bi-building me-2"></i>
+
             Hotel
+
         </a>
+
 
         <button
             class="navbar-toggler"
             type="button"
             data-bs-toggle="collapse"
-            data-bs-target="#navbarNav">
+            data-bs-target="#navbarMenu">
+
             <span class="navbar-toggler-icon"></span>
+
         </button>
 
-        <div class="collapse navbar-collapse" id="navbarNav">
+
+        <div
+            class="collapse navbar-collapse"
+            id="navbarMenu">
 
             <ul class="navbar-nav ms-auto">
 
+                <!-- HOME -->
                 <li class="nav-item">
-                    <a class="nav-link"
-                       href="${pageContext.request.contextPath}/">
+
+                    <a
+                        class="nav-link active"
+                        href="${ctx}/">
+
+                        <i class="bi bi-house me-1"></i>
                         Home
+
                     </a>
+
                 </li>
 
+
+                <!-- ROOMS -->
                 <li class="nav-item">
-                    <a class="nav-link"
-                       href="${pageContext.request.contextPath}/rooms">
+
+                    <a
+                        class="nav-link"
+                        href="${ctx}/rooms">
+
+                        <i class="bi bi-door-open me-1"></i>
                         Rooms
+
                     </a>
+
                 </li>
 
+
+                <!-- MY BOOKINGS -->
                 <li class="nav-item">
-                    <a class="nav-link"
-                       href="${pageContext.request.contextPath}/login">
+
+                    <a
+                        class="nav-link"
+                        href="${ctx}/reservations/my-bookings">
+
+                        <i class="bi bi-calendar-check me-1"></i>
+                        My Bookings
+
+                    </a>
+
+                </li>
+
+
+                <!-- LOGIN -->
+                <li class="nav-item">
+
+                    <a
+                        class="nav-link"
+                        href="${ctx}/login">
+
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
                         Login
+
                     </a>
+
                 </li>
 
+
+                <!-- REGISTER -->
                 <li class="nav-item">
-                    <a class="nav-link"
-                       href="${pageContext.request.contextPath}/register">
+
+                    <a
+                        class="nav-link"
+                        href="${ctx}/register">
+
+                        <i class="bi bi-person-plus me-1"></i>
                         Register
+
                     </a>
+
                 </li>
 
             </ul>
 
         </div>
+
     </div>
+
 </nav>
+
+
 
 
 <div class="container py-5">
@@ -128,7 +198,7 @@
         <c:when test="${not empty room}">
 
             <div class="mb-4">
-                <a href="${pageContext.request.contextPath}/"
+                <a href="${pageContext.request.contextPath}/rooms"
                    class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i>
                     Back to Rooms
@@ -141,17 +211,31 @@
 
                     <div class="row g-5">
 
-                        <!-- Room image -->
+                        <!-- ROOM IMAGE -->
                         <div class="col-lg-6">
 
                             <div class="room-image">
-                                <i class="bi bi-door-open"></i>
+
+								 <c:choose>
+								    <c:when test="${not empty room.roomType.imageUrl}">
+								        <img src="${pageContext.request.contextPath}${room.roomType.imageUrl}"
+								             alt="Room ${room.roomNumber}"
+								             class="room-image">
+								    </c:when>
+								
+								    <c:otherwise>
+								        <div class="room-image-placeholder">
+								            <i class="bi bi-door-open"></i>
+								        </div>
+								    </c:otherwise>
+								</c:choose>
+
                             </div>
 
                         </div>
 
 
-                        <!-- Room information -->
+                        <!-- ROOM INFORMATION -->
                         <div class="col-lg-6">
 
                             <div class="mb-3">
@@ -170,7 +254,6 @@
                                 ${room.roomType.typeName}
                             </h4>
 
-
                             <div class="price mb-4">
 
                                 $${room.roomType.price}
@@ -181,7 +264,6 @@
 
                             </div>
 
-
                             <p class="text-muted mb-4">
                                 ${room.description}
                             </p>
@@ -190,7 +272,6 @@
                             <div class="row g-3 mb-4">
 
                                 <div class="col-md-6">
-
                                     <div class="info-box">
 
                                         <div class="text-muted small">
@@ -202,12 +283,10 @@
                                         </strong>
 
                                     </div>
-
                                 </div>
 
 
                                 <div class="col-md-6">
-
                                     <div class="info-box">
 
                                         <div class="text-muted small">
@@ -219,12 +298,10 @@
                                         </strong>
 
                                     </div>
-
                                 </div>
 
 
                                 <div class="col-md-6">
-
                                     <div class="info-box">
 
                                         <div class="text-muted small">
@@ -237,12 +314,10 @@
                                         </strong>
 
                                     </div>
-
                                 </div>
 
 
                                 <div class="col-md-6">
-
                                     <div class="info-box">
 
                                         <div class="text-muted small">
@@ -254,7 +329,6 @@
                                         </strong>
 
                                     </div>
-
                                 </div>
 
                             </div>
@@ -278,16 +352,19 @@
                             </c:if>
 
 
-
-								<a href="${ctx}/reservations/book?roomId=${room.roomId}"
-								   class="btn btn-primary">
-								    Book Now
-								</a>
-
-
+                            <div class="d-flex gap-2 flex-wrap">
 
                                 <a
-                                    href="${pageContext.request.contextPath}/"
+                                    href="${pageContext.request.contextPath}/reservations/book?roomId=${room.roomId}"
+                                    class="btn btn-primary btn-lg">
+
+                                    <i class="bi bi-calendar-check me-1"></i>
+                                    Book Now
+
+                                </a>
+
+                                <a
+                                    href="${pageContext.request.contextPath}/rooms"
                                     class="btn btn-outline-secondary btn-lg">
 
                                     Back
@@ -325,7 +402,7 @@
                     </p>
 
                     <a
-                        href="${pageContext.request.contextPath}/"
+                        href="${pageContext.request.contextPath}/rooms"
                         class="btn btn-primary">
 
                         Back to Rooms
@@ -356,28 +433,14 @@
 </footer>
 
 
-<script>
-
-    function bookRoom(roomId) {
-
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-            window.location.href =
-                "${pageContext.request.contextPath}/login";
-            return;
-        }
-
-        window.location.href =
-            "${pageContext.request.contextPath}/?bookRoom=" + roomId;
-    }
-
-</script>
-
 <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
 </script>
 
 </body>
 </html>
+
+
+
+
 

@@ -1,20 +1,24 @@
+
 package com.hotel.controller;
 
 import com.hotel.dto.ApiResponse;
 import com.hotel.dto.ReservationRequest;
 import com.hotel.model.Reservation;
+import com.hotel.model.User;
+import com.hotel.repository.UserRepository;
 import com.hotel.service.ReservationService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-import com.hotel.model.User;
-import com.hotel.repository.UserRepository;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,8 +33,10 @@ public class ReservationRestController {
 
     @Autowired
     private ReservationService reservationService;
+
     @Autowired
     private UserRepository userRepository;
+
 
     // =====================================================
     // 1. CREATE RESERVATION
@@ -58,6 +64,7 @@ public class ReservationRestController {
                 );
     }
 
+
     // =====================================================
     // 2. GET ALL RESERVATIONS
     // GET /api/reservations
@@ -81,6 +88,7 @@ public class ReservationRestController {
                 )
         );
     }
+
 
     // =====================================================
     // 3. GET RESERVATIONS BY USER
@@ -106,6 +114,7 @@ public class ReservationRestController {
         );
     }
 
+
     // =====================================================
     // 4. CANCEL RESERVATION
     // DELETE /api/reservations/{id}
@@ -116,21 +125,54 @@ public class ReservationRestController {
             summary = "បោះបង់ការកក់បន្ទប់",
             description = "ប្តូរ Reservation status ទៅ CANCELLED"
     )
-public ResponseEntity<ApiResponse<Void>> cancelReservation(
-        @PathVariable Integer id,
-        Authentication authentication) {
+    public ResponseEntity<ApiResponse<Void>> cancelReservation(
+            @PathVariable Integer id,
+            Authentication authentication) {
 
-    String username = authentication.getName();
+        String username = authentication.getName();
 
-    User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new IllegalArgumentException("រកមិនឃើញ User!"));
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "រកមិនឃើញ User!"
+                        )
+                );
 
-    Integer userId = Math.toIntExact(user.getUserId());
+        Integer userId = Math.toIntExact(user.getUserId());
 
-    reservationService.cancelReservationByUserId(id, userId);
+        reservationService.cancelReservationByUserId(id, userId);
 
-    return ResponseEntity.ok(
-            ApiResponse.success("បោះបង់ការកក់បន្ទប់ជោគជ័យ", null)
-    );
-}
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "បោះបង់ការកក់បន្ទប់ជោគជ័យ",
+                        null
+                )
+        );
+    }
+
+
+    // =====================================================
+    // 5. CONFIRM RESERVATION
+    // POST /api/reservations/{id}/confirm
+    // ADMIN ONLY
+    // =====================================================
+    @PostMapping("/{id}/confirm")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "បញ្ជាក់ការកក់បន្ទប់",
+            description = "Admin បញ្ជាក់ Reservation ដែលមាន Status PENDING"
+    )
+    public ResponseEntity<ApiResponse<Reservation>> confirmReservation(
+            @PathVariable Integer id) {
+
+        Reservation reservation =
+                reservationService.confirmReservation(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "បញ្ជាក់ការកក់បន្ទប់ជោគជ័យ",
+                        reservation
+                )
+        );
+    }
 }

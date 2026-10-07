@@ -1,121 +1,67 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
-<c:set var="ctx" value="${pageContext.request.contextPath}" />
-<%--
-  Highlights the current nav item by matching the start of the request URI.
-  Works as long as each admin servlet's URL starts with the path shown below.
---%>
-<c:set var="uri" value="${pageContext.request.requestURI}" />
 
-<div class="admin-layout">
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
-    <aside class="admin-sidebar">
-        <a href="${ctx}/admin" class="admin-brand">
-            <i class="bi bi-building"></i><span>Hotel Admin</span>
-        </a>
+<%
+    String sbCtx = request.getContextPath();
+    String currentPath = request.getRequestURI()
+            .substring(request.getContextPath().length());
+%>
 
-        <nav class="admin-nav">
-            <a href="${ctx}/admin"
-			   class="admin-nav-link ${uri == ctx.concat('/admin') ? 'active' : ''}">
-			    <i class="bi bi-speedometer2"></i><span>Dashboard</span>
-			</a>
-            <a href="${ctx}/admin/reservations"
-               class="admin-nav-link ${fn:contains(uri, '/admin/reservations') ? 'active' : ''}">
-                <i class="bi bi-journal-check"></i><span>Reservations</span>
-            </a>
-            <a href="${ctx}/admin/rooms"
-               class="admin-nav-link ${fn:contains(uri, '/admin/rooms') ? 'active' : ''}">
-                <i class="bi bi-door-open"></i><span>Rooms</span>
-            </a>
-            <a href="${ctx}/admin/room-types"
-               class="admin-nav-link ${fn:contains(uri, '/admin/room-types') ? 'active' : ''}">
-                <i class="bi bi-tags"></i><span>Room types</span>
-            </a>
-            <a href="${ctx}/admin/customers"
-               class="admin-nav-link ${fn:contains(uri, '/admin/customers') ? 'active' : ''}">
-                <i class="bi bi-people"></i><span>Customers</span>
-            </a>
-        </nav>
+<div class="col-md-3 col-lg-2 px-0 sidebar">
 
-        <div class="admin-sidebar-footer">
-            <a href="${ctx}/index.jsp" class="admin-nav-link">
-                <i class="bi bi-box-arrow-up-left"></i><span>View site</span>
-            </a>
-            <a href="#" onclick="handleLogout(event)" class="admin-nav-link">
-                <i class="bi bi-box-arrow-right"></i><span>Log out</span>
-            </a>
-        </div>
-    </aside>
+    <div class="p-4 text-white">
+        <h4>
+            <i class="bi bi-building me-2"></i>
+            Hotel Admin
+        </h4>
+    </div>
 
-    <div class="admin-main">
+    <a href="<%= sbCtx %>/admin"
+       class="<%= "/admin".equals(currentPath) ? "active" : "" %>">
+        <i class="bi bi-speedometer2 me-2"></i>
+        Dashboard
+    </a>
 
-        <header class="admin-topbar">
-            <button class="admin-menu-toggle d-lg-none" type="button" aria-label="Toggle menu"
-                    onclick="document.querySelector('.admin-layout').classList.toggle('sidebar-open')">
-                <i class="bi bi-list"></i>
-            </button>
+    <a href="<%= sbCtx %>/admin/reservations"
+       class="<%= "/admin/reservations".equals(currentPath) ? "active" : "" %>">
+        <i class="bi bi-calendar-check me-2"></i>
+        Reservations
+    </a>
 
-            <h1 class="admin-page-title"><c:out value="${empty pageTitle ? 'Dashboard' : pageTitle}" /></h1>
+    <a href="<%= sbCtx %>/admin/rooms"
+       class="<%= "/admin/rooms".equals(currentPath) ? "active" : "" %>">
+        <i class="bi bi-door-open me-2"></i>
+        Rooms
+    </a>
 
-            <div class="admin-user">
-                <i class="bi bi-person-circle"></i>
-                <span id="adminFullName">
-                    <c:out value="${empty sessionScope.user ? 'Admin' : sessionScope.user.fullName}" />
-                </span>
-            </div>
-        </header>
+    <a href="<%= sbCtx %>/admin/room-types"
+       class="<%= "/admin/room-types".equals(currentPath) ? "active" : "" %>">
+        <i class="bi bi-grid me-2"></i>
+        Room Types
+    </a>
 
-        <main class="admin-content">
+    <a href="<%= sbCtx %>/admin/customers"
+       class="<%= "/admin/customers".equals(currentPath) ? "active" : "" %>">
+        <i class="bi bi-people me-2"></i>
+        Customers
+    </a>
 
-            <!-- ============================================================
-                 JAVASCRIPT FETCH API INTEGRATION FOR SIDEBAR & TOPBAR
-                 ============================================================ -->
-            <script>
-                document.addEventListener("DOMContentLoaded", function () {
-                    loadAdminUserProfile();
-                });
+    <hr class="text-secondary">
 
-                function loadAdminUserProfile() {
-                    const token = localStorage.getItem('accessToken');
-                    if (!token) return;
+    <a href="<%= sbCtx %>/rooms">
+        <i class="bi bi-house me-2"></i>
+        Customer Site
+    </a>
 
-                    fetch('${ctx}/api/admin/profile', {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer ' + token
-                        }
-                    })
-                        .then(response => {
-                            if (response.ok) return response.json();
-                            throw new Error('Failed to load profile');
-                        })
-                        .then(data => {
-                            if (data && data.fullName) {
-                                document.getElementById('adminFullName').textContent = data.fullName;
-                            }
-                        })
-                        .catch(error => {
-                            console.warn('Could not fetch admin user details via API:', error);
-                        });
-                }
+    <a href="<%= sbCtx %>/login"
+       onclick="localStorage.removeItem('accessToken');
+                localStorage.removeItem('token');">
+        <i class="bi bi-box-arrow-right me-2"></i>
+        Logout
+    </a>
 
-                function handleLogout(event) {
-                    event.preventDefault();
-                    const token = localStorage.getItem('accessToken');
+</div>
 
-                    fetch('${ctx}/api/auth/logout', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer ' + token
-                        }
-                    })
-                        .finally(() => {
-                            localStorage.removeItem('accessToken');
-                            sessionStorage.clear();
-                            window.location.href = '${ctx}/login.jsp';
-                        });
-                }
-            </script>
+<div class="col-md-9 col-lg-10">
+    <div class="p-4">
+

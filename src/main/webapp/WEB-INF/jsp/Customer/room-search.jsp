@@ -124,96 +124,121 @@ pageEncoding="UTF-8" %>
 
 <!-- ===================================================== -->
 
+
 <nav class="navbar navbar-expand-lg bg-white border-bottom">
 
+    <div class="container">
 
-<div class="container">
+        <a class="navbar-brand"
+           href="${ctx}/">
 
-    <a class="navbar-brand"
-       href="${ctx}/">
+            <i class="bi bi-building me-2"></i>
 
-        <i class="bi bi-building me-2"></i>
+            Hotel
 
-        Hotel
-
-    </a>
-
-
-    <button
-        class="navbar-toggler"
-        type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#navbarMenu">
-
-        <span class="navbar-toggler-icon"></span>
-
-    </button>
+        </a>
 
 
-    <div
-        class="collapse navbar-collapse"
-        id="navbarMenu">
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarMenu">
 
-        <ul class="navbar-nav ms-auto">
+            <span class="navbar-toggler-icon"></span>
 
-            <li class="nav-item">
-
-                <a
-                    class="nav-link active"
-                    href="${ctx}/">
-
-                    Home
-
-                </a>
-
-            </li>
+        </button>
 
 
-            <li class="nav-item">
+        <div
+            class="collapse navbar-collapse"
+            id="navbarMenu">
 
-                <a
-                    class="nav-link"
-                    href="${ctx}/rooms">
+            <ul class="navbar-nav ms-auto">
 
-                    Rooms
+                <!-- HOME -->
+                <li class="nav-item">
 
-                </a>
+                    <a
+                        class="nav-link active"
+                        href="${ctx}/">
 
-            </li>
+                        <i class="bi bi-house me-1"></i>
+                        Home
 
+                    </a>
 
-            <li class="nav-item">
-
-                <a
-                    class="nav-link"
-                    href="${ctx}/login">
-
-                    Login
-
-                </a>
-
-            </li>
+                </li>
 
 
-            <li class="nav-item">
+                <!-- ROOMS -->
+                <li class="nav-item">
 
-                <a
-                    class="nav-link"
-                    href="${ctx}/register">
+                    <a
+                        class="nav-link"
+                        href="${ctx}/rooms">
 
-                    Register
+                        <i class="bi bi-door-open me-1"></i>
+                        Rooms
 
-                </a>
+                    </a>
 
-            </li>
+                </li>
 
-        </ul>
+
+                <!-- MY BOOKINGS -->
+                <li class="nav-item">
+
+                    <a
+                        class="nav-link"
+                        href="${ctx}/reservations/my-bookings">
+
+                        <i class="bi bi-calendar-check me-1"></i>
+                        My Bookings
+
+                    </a>
+
+                </li>
+
+
+                <!-- LOGIN -->
+                <li class="nav-item">
+
+                    <a
+                        class="nav-link"
+                        href="${ctx}/login">
+
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                        Login
+
+                    </a>
+
+                </li>
+
+
+                <!-- REGISTER -->
+                <li class="nav-item">
+
+                    <a
+                        class="nav-link"
+                        href="${ctx}/register">
+
+                        <i class="bi bi-person-plus me-1"></i>
+                        Register
+
+                    </a>
+
+                </li>
+
+            </ul>
+
+        </div>
 
     </div>
 
-</div>
-
 </nav>
+
+
 
 <!-- ===================================================== -->
 
@@ -349,55 +374,215 @@ pageEncoding="UTF-8" %>
 
 </div>
 
-<!-- ===================================================== -->
 
+<!-- ===================================================== -->
 <!-- ROOMS -->
-
 <!-- ===================================================== -->
 
-<main class="container py-5">
+<div class="container py-5">
 
-```
-<div class="d-flex
-            justify-content-between
-            align-items-center
-            mb-4">
+    <c:choose>
 
-    <div>
+        <c:when test="${empty rooms}">
 
-        <h2 class="fw-bold mb-1">
+            <div class="empty-box">
+                <i class="bi bi-door-closed"
+                   style="font-size: 60px; color: #6c757d;"></i>
 
-            Available Rooms
+                <h4 class="mt-4">
+                    No Rooms Found
+                </h4>
 
-        </h2>
-
-
-        <c:choose>
-
-            <c:when test="${empty rooms}">
-
-                <p class="text-muted mb-0">
-
-                    No rooms available.
-
+                <p class="text-muted">
+                    There are currently no rooms available.
                 </p>
 
-            </c:when>
+                <a href="${ctx}/"
+                   class="btn btn-primary">
+                    Back to Home
+                </a>
+            </div>
+
+        </c:when>
+
+        <c:otherwise>
+
+            <div class="row g-4">
+
+                <c:forEach var="room" items="${rooms}">
+
+                    <!-- Each room gets its own Bootstrap column -->
+                    <div class="col-12 col-md-6 col-lg-4">
+
+                        <div class="room-card d-flex flex-column h-100">
+
+                            <!-- ROOM IMAGE -->
+                            
+							<c:choose>
+							    <c:when test="${not empty room.roomType.imageUrl}">
+							        <img src="${pageContext.request.contextPath}${room.roomType.imageUrl}"
+							             class="card-img-top"
+							             alt="${room.roomType.typeName}"
+							             style="height: 220px; object-fit: cover;">
+							    </c:when>
+							
+							    <c:otherwise>
+							        <div class="room-image">
+							            <i class="bi bi-building"></i>
+							        </div>
+							    </c:otherwise>
+							</c:choose>
 
 
-            <c:otherwise>
 
-                <p class="text-muted mb-0">
 
-                    ${rooms.size()} room(s) available
+                            <!-- ROOM BODY -->
+                            <div class="p-4 d-flex flex-column flex-grow-1">
 
-                </p>
+                                <!-- TITLE -->
+                                <div class="d-flex justify-content-between align-items-start">
 
-            </c:otherwise>
+                                    <div>
 
-        </c:choose>
+                                        <h4 class="mb-1">
+                                            ${room.roomType.typeName}
+                                        </h4>
 
-    </div>
+                                        <div class="text-muted">
+                                            Room ${room.roomNumber}
+                                        </div>
+
+                                    </div>
+
+                                    <c:choose>
+
+                                        <c:when test="${room.status == 'AVAILABLE'}">
+
+                                            <span class="badge bg-success status-badge">
+                                                Available
+                                            </span>
+
+                                        </c:when>
+
+                                        <c:otherwise>
+
+                                            <span class="badge bg-secondary status-badge">
+                                                ${room.status}
+                                            </span>
+
+                                        </c:otherwise>
+
+                                    </c:choose>
+
+                                </div>
+
+
+                                <hr>
+
+
+                                <!-- PRICE -->
+                                <div class="room-price">
+
+                                    $${room.roomType.price}
+
+                                    <span class="text-muted fs-6 fw-normal">
+                                        / night
+                                    </span>
+
+                                </div>
+
+
+                                <!-- INFO -->
+                                <div class="room-info mt-3">
+
+                                    <div class="mb-2">
+                                        <i class="bi bi-people me-2"></i>
+                                        ${room.roomType.capacity} guest(s)
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <i class="bi bi-layers me-2"></i>
+                                        Floor ${room.floor}
+                                    </div>
+
+                                    <c:if test="${not empty room.roomType.amenities}">
+
+                                        <div>
+                                            <i class="bi bi-stars me-2"></i>
+                                            ${room.roomType.amenities}
+                                        </div>
+
+                                    </c:if>
+
+                                </div>
+
+
+                                <!-- DESCRIPTION -->
+                                <c:if test="${not empty room.description}">
+
+                                    <p class="text-muted small mt-3">
+                                        ${room.description}
+                                    </p>
+
+                                </c:if>
+
+
+                                <!-- BUTTONS -->
+                                <div class="d-grid gap-2 mt-auto pt-3">
+
+                                    <a href="${ctx}/room-detail?id=${room.roomId}"
+                                       class="btn btn-outline-primary">
+
+                                        <i class="bi bi-eye me-1"></i>
+                                        View Details
+
+                                    </a>
+
+
+                                    <c:choose>
+
+                                        <c:when test="${room.status == 'AVAILABLE'}">
+
+                                            <a href="${ctx}/reservations/book?roomId=${room.roomId}"
+                                               class="btn btn-success">
+
+                                                <i class="bi bi-calendar-check me-1"></i>
+                                                Book Now
+
+                                            </a>
+
+                                        </c:when>
+
+                                        <c:otherwise>
+
+                                            <button type="button"
+                                                    class="btn btn-secondary"
+                                                    disabled>
+
+                                                <i class="bi bi-lock me-1"></i>
+                                                Not Available
+
+                                            </button>
+
+                                        </c:otherwise>
+
+                                    </c:choose>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </c:forEach>
+
+            </div>
+
+        </c:otherwise>
+
+    </c:choose>
 
 </div>
 
@@ -407,273 +592,9 @@ pageEncoding="UTF-8" %>
 <!-- NO ROOMS -->
 <!-- ================================================= -->
 
-<c:if test="${empty rooms}">
 
-    <div class="empty-box">
 
-        <i
-            class="bi bi-door-closed"
-            style="font-size: 60px; color: #6c757d;">
-        </i>
 
-
-        <h4 class="mt-4">
-
-            No Rooms Found
-
-        </h4>
-
-
-        <p class="text-muted">
-
-            There are currently no rooms available.
-
-        </p>
-
-
-        <a
-            href="${ctx}/"
-            class="btn btn-primary">
-
-            Back to Home
-
-        </a>
-
-    </div>
-
-</c:if>
-
-
-
-<!-- ================================================= -->
-<!-- ROOM LIST -->
-<!-- ================================================= -->
-
-<c:if test="${not empty rooms}">
-
-    <div class="row g-4">
-
-
-        <c:forEach
-            var="room"
-            items="${rooms}">
-
-
-            <div class="col-md-6 col-lg-4">
-
-
-                <div class="room-card">
-
-
-                    <!-- IMAGE -->
-
-                    <div class="room-image">
-
-                        <i class="bi bi-building"></i>
-
-                    </div>
-
-
-
-                    <!-- BODY -->
-
-                    <div class="p-4">
-
-
-                        <!-- TITLE -->
-
-                        <div class="d-flex
-                                    justify-content-between
-                                    align-items-start">
-
-                            <div>
-
-                                <h4 class="mb-1">
-
-                                    ${room.roomType.typeName}
-
-                                </h4>
-
-
-                                <div class="text-muted">
-
-                                    Room ${room.roomNumber}
-
-                                </div>
-
-                            </div>
-
-
-                            <c:choose>
-
-                                <c:when
-                                    test="${room.status == 'AVAILABLE'}">
-
-                                    <span
-                                        class="badge bg-success status-badge">
-
-                                        Available
-
-                                    </span>
-
-                                </c:when>
-
-
-                                <c:otherwise>
-
-                                    <span
-                                        class="badge bg-secondary status-badge">
-
-                                        ${room.status}
-
-                                    </span>
-
-                                </c:otherwise>
-
-                            </c:choose>
-
-                        </div>
-
-
-
-                        <hr>
-
-
-
-                        <!-- PRICE -->
-
-                        <div class="room-price">
-
-                            $${room.roomType.price}
-
-                            <span
-                                class="text-muted fs-6 fw-normal">
-
-                                / night
-
-                            </span>
-
-                        </div>
-
-
-
-                        <!-- INFO -->
-
-                        <div class="room-info mt-3">
-
-
-                            <div class="mb-2">
-
-                                <i
-                                    class="bi bi-people me-2">
-                                </i>
-
-                                ${room.roomType.capacity}
-                                guest(s)
-
-                            </div>
-
-
-                            <div class="mb-2">
-
-                                <i
-                                    class="bi bi-layers me-2">
-                                </i>
-
-                                Floor ${room.floor}
-
-                            </div>
-
-
-                            <c:if
-                                test="${not empty room.roomType.amenities}">
-
-                                <div>
-
-                                    <i
-                                        class="bi bi-stars me-2">
-                                    </i>
-
-                                    ${room.roomType.amenities}
-
-                                </div>
-
-                            </c:if>
-
-                        </div>
-
-
-
-                        <!-- DESCRIPTION -->
-
-                        <c:if
-                            test="${not empty room.description}">
-
-                            <p class="text-muted small mt-3 mb-0">
-
-                                ${room.description}
-
-                            </p>
-
-                        </c:if>
-
-
-
-
-						<!-- BUTTONS -->
-						<div class="d-grid gap-2 mt-4">
-						
-						    <!-- View Details -->
-						    <a href="${pageContext.request.contextPath}/room-detail?id=${room.roomId}"
-						       class="btn btn-outline-primary">
-						        <i class="bi bi-eye me-1"></i>
-						        View Details
-						    </a>
-						
-						    <!-- Book Room -->
-						    <c:choose>
-						
-						        <c:when test="${room.status == 'AVAILABLE'}">
-						
-						            <a href="${pageContext.request.contextPath}/reservations/book?roomId=${room.roomId}"
-						               class="btn btn-success">
-						                <i class="bi bi-calendar-check me-1"></i>
-						                Book Now
-						            </a>
-						
-						        </c:when>
-						
-						        <c:otherwise>
-						
-						            <button type="button"
-						                    class="btn btn-secondary"
-						                    disabled>
-						                <i class="bi bi-lock me-1"></i>
-						                Not Available
-						            </button>
-						
-						        </c:otherwise>
-						
-						    </c:choose>
-						
-						</div>
-
-                    </div>
-
-                </div>
-
-            </div>
-    </div>
-
-
-        </c:forEach>
-
-    </div>
-
-</c:if>
-
-
-</main>
 
 <!-- ===================================================== -->
 

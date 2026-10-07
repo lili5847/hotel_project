@@ -23,32 +23,71 @@ public class PaymentService {
     @Transactional
     public Payment processPayment(PaymentRequest request) {
 
-        Reservation reservation = reservationRepository.findById(request.getReservationId())
-                .orElseThrow(() -> new RuntimeException("រកមិនឃើញការកក់បន្ទប់ដែលមាន ID នេះឡើយ"));
+        Reservation reservation =
+                reservationRepository.findById(request.getReservationId())
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "រកមិនឃើញការកក់បន្ទប់ដែលមាន ID នេះឡើយ"
+                                )
+                        );
 
-        // ✅ កែសម្រួលមកប្រើ getTotalAmount() ជំនួស getTotalPrice()
-        if (!request.getAmount().equals(reservation.getTotalAmount())) {
-            throw new RuntimeException("ចំនួនទឹកប្រាក់ដែលបានបង់ ($" + request.getAmount() +
-                    ") មិនត្រូវគ្នាជាមួយនឹងតម្លៃសរុបនៃការកក់ ($" + reservation.getTotalAmount() + ") ឡើយ");
+        if ("CANCELLED".equalsIgnoreCase(reservation.getStatus())) {
+            throw new RuntimeException(
+                    "ការកក់បន្ទប់នេះត្រូវបានលុបចោលរួចហើយ"
+            );
+        }
+
+        if ("CONFIRMED".equalsIgnoreCase(reservation.getStatus())) {
+            throw new RuntimeException(
+                    "ការកក់បន្ទប់នេះត្រូវបានបញ្ជាក់រួចហើយ"
+            );
+        }
+
+        if (reservation.getTotalAmount() == null) {
+            throw new RuntimeException(
+                    "ការកក់នេះមិនមានតម្លៃសរុបឡើយ"
+            );
+        }
+
+        if (request.getAmount() == null
+                || Double.compare(
+                        request.getAmount(),
+                        reservation.getTotalAmount()
+                ) != 0) {
+
+            throw new RuntimeException(
+                    "ចំនួនទឹកប្រាក់ដែលបានបង់ ($"
+                    + request.getAmount()
+                    + ") មិនត្រូវគ្នាជាមួយនឹងតម្លៃសរុបនៃការកក់ ($"
+                    + reservation.getTotalAmount()
+                    + ") ឡើយ"
+            );
         }
 
         Payment payment = new Payment();
+
         payment.setReservation(reservation);
         payment.setAmount(request.getAmount());
         payment.setPaymentMethod(request.getPaymentMethod());
         payment.setTransactionId(request.getTransactionId());
-        payment.setPaymentDate(LocalDateTime.now());
         payment.setPaymentStatus("COMPLETED");
+        payment.setPaidAt(LocalDateTime.now());
 
         reservation.setStatus("CONFIRMED");
+
         reservationRepository.save(reservation);
 
         return paymentRepository.save(payment);
     }
 
     public Payment getPaymentByReservationId(Integer reservationId) {
-        // ✅ កែសម្រួលឱ្យត្រូវតាម Property bookingId របស់ Reservation
-        return paymentRepository.findByReservationBookingId(reservationId)
-                .orElseThrow(() -> new RuntimeException("រកមិនឃើញព័ត៌មានទូទាត់ប្រាក់សម្រាប់ការកក់នេះឡើយ"));
+
+        return paymentRepository
+                .findByReservationBookingId(reservationId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "រកមិនឃើញព័ត៌មានទូទាត់ប្រាក់សម្រាប់ការកក់នេះឡើយ"
+                        )
+                );
     }
 }

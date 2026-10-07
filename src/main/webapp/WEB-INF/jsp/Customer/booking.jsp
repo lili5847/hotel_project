@@ -1,3 +1,4 @@
+
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 
@@ -5,19 +6,18 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
 
-    <title>Book Room - Hotel Reservation</title>
+    <meta charset="UTF-8">
 
     <meta name="viewport"
           content="width=device-width, initial-scale=1">
 
-    <!-- Bootstrap -->
+    <title>Book Room - Hotel Reservation</title>
+
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet">
 
-    <!-- Bootstrap Icons -->
     <link
         rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -40,7 +40,7 @@
             box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
         }
 
-        .room-image-placeholder {
+        .room-image {
             min-height: 420px;
             background: linear-gradient(
                 135deg,
@@ -51,11 +51,19 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #6c757d;
+
+            overflow: hidden;
         }
 
-        .room-image-placeholder i {
+        .room-image img {
+            width: 100%;
+            height: 420px;
+            object-fit: cover;
+        }
+
+        .room-image-placeholder {
             font-size: 90px;
+            color: #6c757d;
         }
 
         .room-info {
@@ -95,13 +103,14 @@
         }
 
     </style>
+
 </head>
+
 
 <body>
 
-<!-- ========================= -->
+
 <!-- NAVBAR -->
-<!-- ========================= -->
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
 
@@ -115,6 +124,7 @@
 
         </a>
 
+
         <button
             class="navbar-toggler"
             type="button"
@@ -124,6 +134,7 @@
             <span class="navbar-toggler-icon"></span>
 
         </button>
+
 
         <div class="collapse navbar-collapse"
              id="navbarNav">
@@ -141,6 +152,7 @@
                     </a>
 
                 </li>
+
 
                 <li class="nav-item">
 
@@ -163,13 +175,12 @@
 </nav>
 
 
-<!-- ========================= -->
-<!-- MAIN CONTENT -->
-<!-- ========================= -->
 
 <div class="container booking-container">
 
-    <!-- ERROR MESSAGE -->
+
+    <!-- ERROR -->
+
     <c:if test="${not empty error}">
 
         <div class="alert alert-danger alert-dismissible fade show"
@@ -179,9 +190,10 @@
 
             ${error}
 
-            <button type="button"
-                    class="btn-close"
-                    data-bs-dismiss="alert">
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert">
             </button>
 
         </div>
@@ -189,7 +201,9 @@
     </c:if>
 
 
+
     <!-- ROOM NOT FOUND -->
+
     <c:if test="${empty room}">
 
         <div class="card booking-card">
@@ -208,8 +222,9 @@
                     The selected room could not be found.
                 </p>
 
-                <a href="${pageContext.request.contextPath}/rooms"
-                   class="btn btn-primary">
+                <a
+                    href="${pageContext.request.contextPath}/rooms"
+                    class="btn btn-primary">
 
                     <i class="bi bi-arrow-left me-1"></i>
                     Back to Rooms
@@ -223,7 +238,9 @@
     </c:if>
 
 
+
     <!-- ROOM FOUND -->
+
     <c:if test="${not empty room}">
 
         <div class="card booking-card">
@@ -231,17 +248,31 @@
             <div class="row g-0">
 
 
-                <!-- ========================= -->
                 <!-- ROOM INFORMATION -->
-                <!-- ========================= -->
 
                 <div class="col-lg-6">
 
-                    <div class="room-image-placeholder">
 
-                        <i class="bi bi-building"></i>
+                    <!-- ROOM IMAGE -->
+
+                    <div class="room-image">
+
+                        <c:choose>
+						    <c:when test="${not empty room.roomType.imageUrl}">
+						        <img src="${pageContext.request.contextPath}${room.roomType.imageUrl}"
+						             alt="Room ${room.roomNumber}"
+						             class="room-image">
+						    </c:when>
+						
+						    <c:otherwise>
+						        <div class="room-image-placeholder">
+						            <i class="bi bi-door-open"></i>
+						        </div>
+						    </c:otherwise>
+						</c:choose>
 
                     </div>
+
 
                     <div class="room-info">
 
@@ -250,18 +281,15 @@
                             <div>
 
                                 <h2 class="fw-bold mb-2">
-
                                     Room ${room.roomNumber}
-
                                 </h2>
 
                                 <h5 class="text-primary">
-
                                     ${room.roomType.typeName}
-
                                 </h5>
 
                             </div>
+
 
                             <c:choose>
 
@@ -298,9 +326,7 @@
                             </small>
 
                             <div class="price">
-
                                 $${room.roomType.price}
-
                             </div>
 
                         </div>
@@ -314,7 +340,8 @@
 
                             <strong>Capacity:</strong>
 
-                            ${room.roomType.capacity} guests
+                            ${room.roomType.capacity}
+                            guests
 
                         </div>
 
@@ -364,24 +391,20 @@
                                 </h6>
 
                                 <p class="text-muted">
-
                                     ${room.description}
-
                                 </p>
 
                             </div>
 
                         </c:if>
 
-
                     </div>
 
                 </div>
 
 
-                <!-- ========================= -->
+
                 <!-- BOOKING FORM -->
-                <!-- ========================= -->
 
                 <div class="col-lg-6">
 
@@ -430,9 +453,7 @@
                                     required>
 
                                 <div class="form-text">
-
                                     Select your arrival date.
-
                                 </div>
 
                             </div>
@@ -458,9 +479,7 @@
                                     required>
 
                                 <div class="form-text">
-
                                     Select your departure date.
-
                                 </div>
 
                             </div>
@@ -504,9 +523,7 @@
                             <div class="summary-box mb-4">
 
                                 <h6 class="fw-bold mb-3">
-
                                     Booking Summary
-
                                 </h6>
 
 
@@ -568,6 +585,7 @@
 
                                 </div>
 
+
                                 <small class="text-muted">
 
                                     Total is calculated from
@@ -581,7 +599,6 @@
                             <!-- BUTTONS -->
 
                             <div class="d-grid gap-2">
-
 
                                 <button
                                     type="submit"
@@ -604,7 +621,6 @@
 
                                 </a>
 
-
                             </div>
 
 
@@ -623,9 +639,6 @@
 </div>
 
 
-<!-- ========================= -->
-<!-- JAVASCRIPT -->
-<!-- ========================= -->
 
 <script>
 
@@ -645,26 +658,23 @@
         Number("${room.roomType.capacity}");
 
 
-    // =========================
-    // SET MINIMUM DATES
-    // =========================
-
     const today =
         new Date().toISOString().split("T")[0];
 
+
     if (checkInInput) {
+
         checkInInput.min = today;
+
     }
 
 
     if (checkOutInput) {
+
         checkOutInput.min = today;
+
     }
 
-
-    // =========================
-    // CHECK-IN CHANGE
-    // =========================
 
     if (checkInInput) {
 
@@ -696,10 +706,6 @@
     }
 
 
-    // =========================
-    // CHECK-OUT CHANGE
-    // =========================
-
     if (checkOutInput) {
 
         checkOutInput.addEventListener(
@@ -709,10 +715,6 @@
 
     }
 
-
-    // =========================
-    // CALCULATE TOTAL
-    // =========================
 
     function calculateTotal() {
 
@@ -724,11 +726,14 @@
         ) {
 
             if (totalPriceElement) {
+
                 totalPriceElement.textContent =
                     "$0.00";
+
             }
 
             return;
+
         }
 
 
@@ -767,10 +772,6 @@
 
     }
 
-
-    // =========================
-    // FORM VALIDATION
-    // =========================
 
     const bookingForm =
         document.getElementById("bookingForm");
@@ -845,13 +846,9 @@
 </script>
 
 
-<!-- Bootstrap JS -->
-
 <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
 </script>
 
 </body>
-
 </html>
-

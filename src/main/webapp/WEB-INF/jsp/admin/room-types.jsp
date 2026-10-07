@@ -1,194 +1,913 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<%@ page language="java"
+         contentType="text/html; charset=UTF-8"
+         pageEncoding="UTF-8" %>
 
-<jsp:include page="/WEB-INF/jsp/common/header.jsp">
-    <jsp:param name="title" value="Room types" />
+<jsp:include page="/WEB-INF/jsp/common/admin-header.jsp">
+    <jsp:param name="title" value="Room Types" />
 </jsp:include>
+
 <jsp:include page="/WEB-INF/jsp/common/admin-sidebar.jsp" />
-<!-- Dynamic Alert Container -->
+
 <div id="alertContainer"></div>
 
-<div class="mb-4">
-    <h1 class="h4 mb-0">Room types</h1>
-    <p class="text-body-secondary small mb-0">
-        Edit the description, base price, and amenities shown to guests for each of the 3 room types.
-    </p>
-</div>
-
-<!-- Dynamic Room Types Container -->
-<div id="roomTypesContainer" class="row g-4">
-    <div class="col-12 text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="mt-2 text-body-secondary">Loading room types...</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h4 mb-0">Room Types</h1>
+        <p class="text-body-secondary small mb-0">
+            Manage room types, prices, capacity, amenities and images.
+        </p>
     </div>
+
+    <button type="button"
+            class="btn btn-primary"
+            onclick="openAddRoomTypeForm()">
+
+        <i class="bi bi-plus-circle me-1"></i>
+        Add Room Type
+    </button>
 </div>
 
-<jsp:include page="/common/admin-footer.jsp" />
 
-<!-- ============================================================
-JAVASCRIPT FETCH API INTEGRATION FOR ROOM TYPES
-============================================================ -->
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        loadRoomTypes();
-    });
+<!-- ADD / EDIT FORM -->
 
-    function loadRoomTypes() {
-        const token = localStorage.getItem('accessToken');
+<div class="panel mb-4" id="roomTypeFormPanel">
 
-        fetch('${ctx}/api/admin/room-types', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            }
-        })
-            .then(response => {
-                if (!response.ok) throw new Error('Failed to fetch room types');
-                return response.json();
-            })
-            .then(data => {
-                const roomTypes = Array.isArray(data) ? data : (data.content || data.data || []);
-                renderRoomTypes(roomTypes);
-            })
-            .catch(error => {
-                console.error('Error fetching room types:', error);
-                document.getElementById('roomTypesContainer').innerHTML = `
-            <div class="col-12">
-                <div class="panel p-4 text-center text-danger">
-                    <i class="bi bi-exclamation-triangle fs-3"></i>
-                    <p class="mb-0 mt-2">Nakamaisyu ti panag-fetch ti datos dagiti room type.</p>
+    <div class="panel-header">
+        <h2 class="h6 mb-0" id="formTitle">
+            Add Room Type
+        </h2>
+    </div>
+
+    <form id="roomTypeForm"
+          class="p-3"
+          onsubmit="saveRoomType(event)">
+
+        <input type="hidden"
+               id="roomTypeId">
+
+        <div class="row g-3">
+
+            <div class="col-md-6">
+
+                <label for="typeName"
+                       class="form-label small fw-medium">
+                    Type Name
+                </label>
+
+                <input type="text"
+                       class="form-control"
+                       id="typeName"
+                       placeholder="Standard"
+                       required>
+
+            </div>
+
+
+            <div class="col-md-3">
+
+                <label for="price"
+                       class="form-label small fw-medium">
+                    Price per night
+                </label>
+
+                <div class="input-group">
+
+                    <span class="input-group-text">$</span>
+
+                    <input type="number"
+                           min="0"
+                           step="0.01"
+                           class="form-control"
+                           id="price"
+                           required>
+
                 </div>
-            </div>`;
-            });
+
+            </div>
+
+
+            <div class="col-md-3">
+
+                <label for="capacity"
+                       class="form-label small fw-medium">
+                    Capacity
+                </label>
+
+                <input type="number"
+                       min="1"
+                       step="1"
+                       class="form-control"
+                       id="capacity"
+                       required>
+
+            </div>
+
+
+            <div class="col-12">
+
+                <label for="description"
+                       class="form-label small fw-medium">
+                    Description
+                </label>
+
+                <textarea class="form-control"
+                          id="description"
+                          rows="3"></textarea>
+
+            </div>
+
+
+            <div class="col-md-6">
+
+                <label for="amenities"
+                       class="form-label small fw-medium">
+                    Amenities
+                </label>
+
+                <textarea class="form-control"
+                          id="amenities"
+                          rows="3"
+                          placeholder="Free Wi-Fi, Air conditioning, Mini bar"></textarea>
+
+                <div class="form-text">
+                    Separate amenities with commas.
+                </div>
+
+            </div>
+
+
+            <div class="col-md-6">
+
+                <label for="imageUrl"
+                       class="form-label small fw-medium">
+                    Image URL
+                </label>
+
+                <input type="text"
+                       class="form-control"
+                       id="imageUrl"
+                       placeholder="/images/rooms/standard.jpg">
+
+                <div class="form-text">
+                    Example: /images/rooms/standard.jpg
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="d-flex gap-2 mt-4">
+
+            <button type="submit"
+                    class="btn btn-primary"
+                    id="saveButton">
+
+                <i class="bi bi-check-circle me-1"></i>
+                Add Room Type
+
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    onclick="resetRoomTypeForm()">
+
+                Clear
+
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<!-- ROOM TYPES -->
+
+<div class="panel">
+
+    <div class="panel-header d-flex justify-content-between align-items-center">
+
+        <h2 class="h5 mb-0">
+            Existing Room Types
+            <span id="roomTypeCount"
+                  class="text-body-secondary fw-normal">
+            </span>
+        </h2>
+
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                onclick="loadRoomTypes()">
+
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Refresh
+
+        </button>
+
+    </div>
+
+
+    <div class="table-responsive">
+
+        <table class="table admin-table align-middle mb-0">
+
+            <thead>
+
+            <tr>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Capacity</th>
+                <th>Amenities</th>
+                <th>Image</th>
+                <th class="text-end">Action</th>
+            </tr>
+
+            </thead>
+
+            <tbody id="roomTypesTableBody">
+
+            <tr>
+                <td colspan="7"
+                    class="text-center py-5">
+
+                    <div class="spinner-border text-primary"
+                         role="status">
+
+                        <span class="visually-hidden">
+                            Loading...
+                        </span>
+
+                    </div>
+
+                    <div class="mt-2 text-body-secondary">
+                        Loading room types...
+                    </div>
+
+                </td>
+            </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<jsp:include page="/WEB-INF/jsp/common/admin-footer.jsp" />
+
+
+<script>
+
+const ctx = '<%= request.getContextPath() %>';
+
+const token = localStorage.getItem('token');
+
+let roomTypesData = [];
+
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    console.log('ROOM TYPES PAGE LOADED');
+
+    console.log('Token exists:', !!token);
+
+    loadRoomTypes();
+
+});
+
+
+/* =========================================================
+   API HELPER
+   ========================================================= */
+
+function api(path, options) {
+
+    options = options || {};
+
+    options.headers = Object.assign(
+        {
+            'Content-Type': 'application/json'
+        },
+        options.headers || {}
+    );
+
+    if (token) {
+
+        options.headers['Authorization'] =
+            'Bearer ' + token;
+
     }
 
-    function renderRoomTypes(roomTypes) {
-        const container = document.getElementById('roomTypesContainer');
+    return fetch(ctx + path, options)
 
-        if (roomTypes.length === 0) {
-            container.innerHTML = `
-            <div class="col-12">
-                <div class="panel">
-                    <div class="panel-empty py-5 text-center">
-                        <i class="bi bi-tags fs-1 text-secondary"></i>
-                        <p class="mb-0 mt-2">Room type data hasn't loaded yet.</p>
-                    </div>
-                </div>
-            </div>`;
-            return;
-        }
+        .then(function (response) {
 
-        let html = '';
-        roomTypes.forEach(rt => {
-            const activeCount = rt.activeRoomCount !== undefined ? rt.activeRoomCount : 0;
-            const amenities = rt.amenitiesCsv || (Array.isArray(rt.amenities) ? rt.amenities.join(', ') : '');
+            console.log(
+                'API:',
+                path,
+                'STATUS:',
+                response.status
+            );
 
-            html += `
-            <div class="col-lg-4">
-                <div class="panel h-100">
-                    <div class="panel-header">
-                        <h2 class="h6 mb-0">\${escapeHtml(rt.label || rt.name || '')}</h2>
-                        <span class="small text-body-secondary">
-                            ${activeCount} room(s)
-                        </span>
-                    </div>
+            return response.json()
+                .catch(function () {
+                    return {};
+                })
+                .then(function (body) {
 
-                    <form onsubmit="updateRoomType(event, ${rt.id})" class="p-3">
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">Base price per night</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" min="0" step="1" class="form-control"
-                                       id="basePrice_${rt.id}" value="${rt.basePrice || 0}" required>
-                            </div>
-                        </div>
+                    if (!response.ok) {
 
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">Description</label>
-                            <textarea class="form-control" id="description_${rt.id}" rows="4" required>\${escapeHtml(rt.description || '')}</textarea>
-                        </div>
+                        throw new Error(
+                            body.message ||
+                            ('HTTP ' + response.status)
+                        );
 
-                        <div class="mb-4">
-                            <label class="form-label small fw-medium">Amenities</label>
-                            <textarea class="form-control" id="amenitiesCsv_${rt.id}" rows="3"
-                                      placeholder="Free Wi-Fi, Air conditioning, Mini bar">\\${escapeHtml(amenities)}</textarea>
-                            <div class="form-text">Comma-separated. Shown on the room details page.</div>
-                        </div>
+                    }
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary" id="btn_${rt.id}">Save changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>`;
+                    return body;
+
+                });
+
         });
 
-        container.innerHTML = html;
+}
+
+
+/* =========================================================
+   LOAD ROOM TYPES
+   ========================================================= */
+
+function loadRoomTypes() {
+
+    api('/api/room-types', {
+        method: 'GET'
+    })
+
+    .then(function (res) {
+
+        console.log(
+            'ROOM TYPE API RESPONSE:',
+            res
+        );
+
+        roomTypesData =
+            Array.isArray(res.data)
+                ? res.data
+                : [];
+
+        console.log(
+            'ROOM TYPES:',
+            roomTypesData
+        );
+
+        renderRoomTypes();
+
+    })
+
+    .catch(function (error) {
+
+        console.error(
+            'Error loading room types:',
+            error
+        );
+
+        document.getElementById(
+            'roomTypesTableBody'
+        ).innerHTML =
+
+            '<tr>' +
+            '<td colspan="7" ' +
+            'class="text-center text-danger py-5">' +
+            '<i class="bi bi-exclamation-triangle fs-3"></i>' +
+            '<div class="mt-2">' +
+            'Could not load room types: ' +
+            escapeHtml(error.message) +
+            '</div>' +
+            '</td>' +
+            '</tr>';
+
+    });
+
+}
+
+
+/* =========================================================
+   RENDER ROOM TYPES
+   ========================================================= */
+
+function renderRoomTypes() {
+
+    const tbody =
+        document.getElementById(
+            'roomTypesTableBody'
+        );
+
+    const count =
+        document.getElementById(
+            'roomTypeCount'
+        );
+
+    if (!tbody) {
+        return;
     }
 
-    function updateRoomType(event, id) {
-        event.preventDefault();
-        const token = localStorage.getItem('accessToken');
-        const submitBtn = document.getElementById(`btn_${id}`);
+    if (count) {
 
-        const basePrice = document.getElementById(`basePrice_${id}`).value;
-        const description = document.getElementById(`description_${id}`).value;
-        const amenitiesCsv = document.getElementById(`amenitiesCsv_${id}`).value;
+        count.textContent =
+            '(' + roomTypesData.length + ')';
 
-        const payload = {
-            id: id,
-            basePrice: parseFloat(basePrice),
-            description: description,
-            amenitiesCsv: amenitiesCsv
-        };
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
-
-        fetch(`${ctx}/api/admin/room-types/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify(payload)
-        })
-            .then(response => {
-                if (response.ok) {
-                    showAlert('Room type updated successfully.', 'success');
-                } else {
-                    showAlert('Something went wrong. Please try again.', 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error updating room type:', error);
-                showAlert('Something went wrong. Please try again.', 'danger');
-            })
-            .finally(() => {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Save changes';
-            });
     }
 
-    function showAlert(message, type) {
-        const alertContainer = document.getElementById('alertContainer');
-        alertContainer.innerHTML = `
-        <div class="alert alert-${type} alert-dismissible fade show mb-4" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>`;
+
+    if (roomTypesData.length === 0) {
+
+        tbody.innerHTML =
+
+            '<tr>' +
+            '<td colspan="7" ' +
+            'class="text-center text-muted py-5">' +
+
+            '<i class="bi bi-grid fs-1"></i>' +
+
+            '<div class="mt-2">' +
+            'No room types found.' +
+            '</div>' +
+
+            '</td>' +
+            '</tr>';
+
+        return;
+
     }
 
-    function escapeHtml(str) {
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+
+    tbody.innerHTML =
+
+        roomTypesData.map(function (type) {
+
+            const imageUrl =
+                type.imageUrl || '';
+
+            const imageHtml =
+                imageUrl
+                    ? '<img src="' +
+                      escapeHtml(imageUrl) +
+                      '" ' +
+                      'alt="' +
+                      escapeHtml(type.typeName) +
+                      '" ' +
+                      'style="width:70px;height:50px;object-fit:cover;border-radius:8px;">'
+                    : '<span class="text-muted">No image</span>';
+
+
+            return (
+
+                '<tr>' +
+
+                '<td>' +
+                '<strong>' +
+                escapeHtml(
+                    type.typeName || '-'
+                ) +
+                '</strong>' +
+                '</td>' +
+
+                '<td>' +
+                escapeHtml(
+                    type.description || '-'
+                ) +
+                '</td>' +
+
+                '<td>' +
+                (
+                    type.price != null
+                        ? '$' +
+                          Number(type.price)
+                              .toFixed(2)
+                        : '-'
+                ) +
+                '</td>' +
+
+                '<td>' +
+                (
+                    type.capacity != null
+                        ? escapeHtml(type.capacity)
+                        : '-'
+                ) +
+                '</td>' +
+
+                '<td>' +
+                escapeHtml(
+                    type.amenities || '-'
+                ) +
+                '</td>' +
+
+                '<td>' +
+                imageHtml +
+                '</td>' +
+
+                '<td class="text-end">' +
+
+                '<button type="button" ' +
+                'class="btn btn-sm btn-outline-primary" ' +
+                'onclick="editRoomType(' +
+                type.roomTypeId +
+                ')">' +
+
+                '<i class="bi bi-pencil me-1"></i>' +
+                'Edit' +
+
+                '</button>' +
+
+                '</td>' +
+
+                '</tr>'
+
+            );
+
+        }).join('');
+
+}
+
+
+/* =========================================================
+   OPEN ADD FORM
+   ========================================================= */
+
+function openAddRoomTypeForm() {
+
+    resetRoomTypeForm();
+
+    document.getElementById(
+        'roomTypeFormPanel'
+    ).scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+
+}
+
+
+/* =========================================================
+   EDIT ROOM TYPE
+   ========================================================= */
+
+function editRoomType(id) {
+
+    const roomType =
+        roomTypesData.find(function (item) {
+
+            return Number(item.roomTypeId) ===
+                   Number(id);
+
+        });
+
+    if (!roomType) {
+
+        showAlert(
+            'danger',
+            'Room type not found.'
+        );
+
+        return;
+
     }
+
+
+    document.getElementById(
+        'roomTypeId'
+    ).value =
+        roomType.roomTypeId;
+
+
+    document.getElementById(
+        'typeName'
+    ).value =
+        roomType.typeName || '';
+
+
+    document.getElementById(
+        'price'
+    ).value =
+        roomType.price != null
+            ? roomType.price
+            : '';
+
+
+    document.getElementById(
+        'capacity'
+    ).value =
+        roomType.capacity != null
+            ? roomType.capacity
+            : '';
+
+
+    document.getElementById(
+        'description'
+    ).value =
+        roomType.description || '';
+
+
+    document.getElementById(
+        'amenities'
+    ).value =
+        roomType.amenities || '';
+
+
+    document.getElementById(
+        'imageUrl'
+    ).value =
+        roomType.imageUrl || '';
+
+
+    document.getElementById(
+        'formTitle'
+    ).textContent =
+        'Edit Room Type';
+
+
+    document.getElementById(
+        'saveButton'
+    ).innerHTML =
+        '<i class="bi bi-check-circle me-1"></i>' +
+        'Save Changes';
+
+
+    document.getElementById(
+        'roomTypeFormPanel'
+    ).scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+
+}
+
+
+/* =========================================================
+   SAVE ROOM TYPE
+   ========================================================= */
+
+function saveRoomType(event) {
+
+    event.preventDefault();
+
+
+    const id =
+        document.getElementById(
+            'roomTypeId'
+        ).value;
+
+
+    const typeName =
+        document.getElementById(
+            'typeName'
+        ).value.trim();
+
+
+    const price =
+        document.getElementById(
+            'price'
+        ).value;
+
+
+    const capacity =
+        document.getElementById(
+            'capacity'
+        ).value;
+
+
+    const description =
+        document.getElementById(
+            'description'
+        ).value.trim();
+
+
+    const amenities =
+        document.getElementById(
+            'amenities'
+        ).value.trim();
+
+
+    const imageUrl =
+        document.getElementById(
+            'imageUrl'
+        ).value.trim();
+
+
+    if (!typeName) {
+
+        showAlert(
+            'warning',
+            'Room type name is required.'
+        );
+
+        return;
+
+    }
+
+
+    const payload = {
+
+        typeName: typeName,
+
+        description: description,
+
+        price: price
+            ? Number(price)
+            : null,
+
+        capacity: capacity
+            ? Number(capacity)
+            : null,
+
+        amenities: amenities,
+
+        imageUrl: imageUrl
+
+    };
+
+
+    const isEdit = id !== '';
+
+
+    const url =
+        isEdit
+            ? '/api/room-types/' + id
+            : '/api/room-types';
+
+
+    const method =
+        isEdit
+            ? 'PUT'
+            : 'POST';
+
+
+    const saveButton =
+        document.getElementById(
+            'saveButton'
+        );
+
+
+    saveButton.disabled = true;
+
+    saveButton.textContent =
+        isEdit
+            ? 'Saving...'
+            : 'Creating...';
+
+
+    api(url, {
+
+        method: method,
+
+        body: JSON.stringify(payload)
+
+    })
+
+    .then(function (res) {
+
+        console.log(
+            'SAVE ROOM TYPE RESPONSE:',
+            res
+        );
+
+        showAlert(
+            'success',
+            res.message ||
+            (
+                isEdit
+                    ? 'Room type updated successfully.'
+                    : 'Room type created successfully.'
+            )
+        );
+
+
+        resetRoomTypeForm();
+
+        return loadRoomTypes();
+
+    })
+
+    .catch(function (error) {
+
+        console.error(
+            'Error saving room type:',
+            error
+        );
+
+        showAlert(
+            'danger',
+            error.message ||
+            'Could not save room type.'
+        );
+
+    })
+
+    .finally(function () {
+
+        saveButton.disabled = false;
+
+    });
+
+}
+
+
+/* =========================================================
+   RESET FORM
+   ========================================================= */
+
+function resetRoomTypeForm() {
+
+    const form =
+        document.getElementById(
+            'roomTypeForm'
+        );
+
+    if (form) {
+        form.reset();
+    }
+
+
+    document.getElementById(
+        'roomTypeId'
+    ).value = '';
+
+
+    document.getElementById(
+        'formTitle'
+    ).textContent =
+        'Add Room Type';
+
+
+    document.getElementById(
+        'saveButton'
+    ).innerHTML =
+        '<i class="bi bi-check-circle me-1"></i>' +
+        'Add Room Type';
+
+}
+
+
+/* =========================================================
+   ALERT
+   ========================================================= */
+
+function showAlert(type, message) {
+
+    const container =
+        document.getElementById(
+            'alertContainer'
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML =
+
+        '<div class="alert alert-' +
+        type +
+        ' alert-dismissible fade show mb-4" ' +
+        'role="alert">' +
+
+        escapeHtml(message) +
+
+        '<button type="button" ' +
+        'class="btn-close" ' +
+        'data-bs-dismiss="alert">' +
+        '</button>' +
+
+        '</div>';
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+   ========================================================= */
+
+function escapeHtml(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return '';
+    }
+
+    return String(value)
+
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+}
+
 </script>

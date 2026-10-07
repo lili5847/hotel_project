@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "PAYMENTS")
+@Table(name = "payments")
 public class Payment {
 
     @Id
@@ -13,7 +13,7 @@ public class Payment {
     private Integer paymentId;
 
     @ManyToOne
-    @JoinColumn(name = "booking_id") // ✅ ប្តូរមក booking_id ឱ្យត្រូវតាម Reservation Entity
+    @JoinColumn(name = "booking_id")
     private Reservation reservation;
 
     @Column(name = "amount")
@@ -31,31 +31,62 @@ public class Payment {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
-    public Payment() {}
+    public Payment() {
+    }
 
-    // Getters and Setters
-    public Integer getPaymentId() { return paymentId; }
-    public void setPaymentId(Integer paymentId) { this.paymentId = paymentId; }
+    public Integer getPaymentId() {
+        return paymentId;
+    }
 
-    public Reservation getReservation() { return reservation; }
-    public void setReservation(Reservation reservation) { this.reservation = reservation; }
+    public void setPaymentId(Integer paymentId) {
+        this.paymentId = paymentId;
+    }
 
-    public Double getAmount() { return amount; }
-    public void setAmount(Double amount) { this.amount = amount; }
+    public Reservation getReservation() {
+        return reservation;
+    }
 
-    public String getPaymentMethod() { return paymentMethod; }
-    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+    public void setReservation(Reservation reservation) {
+        this.reservation = reservation;
+    }
 
-    public String getTransactionId() { return transactionId; }
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public Double getAmount() {
+        return amount;
+    }
 
-    public String getPaymentStatus() { return paymentStatus; }
-    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+    public void setAmount(Double amount) {
+        this.amount = amount;
+    }
 
-    public LocalDateTime getPaidAt() { return paidAt; }
-    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
 
-    // ✅ Helper Getters/Setters សម្រាប់ដោះស្រាយ Method setPaymentDate ក្នុង PaymentService
-    public LocalDateTime getPaymentDate() { return paidAt; }
-    public void setPaymentDate(LocalDateTime paymentDate) { this.paidAt = paymentDate; }
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getTransactionId() {
+        return transactionId;
+    }
+
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
+    }
 }

@@ -1,2 +1,8 @@
 /build/
-/target/
+target/
+*.log
+
+.classpath
+.project
+.settings/
+.idea/

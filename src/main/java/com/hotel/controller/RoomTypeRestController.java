@@ -42,18 +42,31 @@ public class RoomTypeRestController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update a room type (ADMIN only)")
-    public ResponseEntity<ApiResponse<RoomType>> updateRoomType(@PathVariable Integer id,
-                                                                @RequestBody RoomType details) {
+    public ResponseEntity<ApiResponse<RoomType>> updateRoomType(
+            @PathVariable Integer id,
+            @RequestBody RoomType details) {
+
         RoomType existing = roomTypeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room type not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Room type not found"
+                        )
+                );
 
         existing.setTypeName(details.getTypeName());
         existing.setDescription(details.getDescription());
         existing.setPrice(details.getPrice());
         existing.setCapacity(details.getCapacity());
         existing.setAmenities(details.getAmenities());
+        existing.setImageUrl(details.getImageUrl());
 
-        return ResponseEntity.ok(ApiResponse.success("Room type updated", roomTypeRepository.save(existing)));
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Room type updated",
+                        roomTypeRepository.save(existing)
+                )
+        );
     }
 
     // No DELETE on purpose: RoomType.rooms uses CascadeType.ALL, so deleting a type

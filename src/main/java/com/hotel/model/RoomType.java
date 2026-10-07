@@ -1,3 +1,4 @@
+
 package com.hotel.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -28,31 +29,80 @@ public class RoomType {
     @Column(name = "amenities")
     private String amenities;
 
+    // Room type image
+    @Column(name = "image_url")
+    private String imageUrl;
+
     @OneToMany(mappedBy = "roomType", cascade = CascadeType.ALL)
-    @JsonIgnore // ការពារ Infinite Recursion/Loop ពេល Convert ទៅជា JSON
+    @JsonIgnore
     private List<Room> rooms;
 
     public RoomType() {}
 
     // Getters and Setters
-    public Integer getRoomTypeId() { return roomTypeId; }
-    public void setRoomTypeId(Integer roomTypeId) { this.roomTypeId = roomTypeId; }
 
-    public String getTypeName() { return typeName; }
-    public void setTypeName(String typeName) { this.typeName = typeName; }
+    public Integer getRoomTypeId() {
+        return roomTypeId;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public void setRoomTypeId(Integer roomTypeId) {
+        this.roomTypeId = roomTypeId;
+    }
 
-    public Double getPrice() { return price; }
-    public void setPrice(Double price) { this.price = price; }
+    public String getTypeName() {
+        return typeName;
+    }
 
-    public Integer getCapacity() { return capacity; }
-    public void setCapacity(Integer capacity) { this.capacity = capacity; }
+    public void setTypeName(String typeName) {
+        this.typeName = typeName;
+    }
 
-    public String getAmenities() { return amenities; }
-    public void setAmenities(String amenities) { this.amenities = amenities; }
+    public String getDescription() {
+        return description;
+    }
 
-    public List<Room> getRooms() { return rooms; }
-    public void setRooms(List<Room> rooms) { this.rooms = rooms; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public Integer getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(Integer capacity) {
+        this.capacity = capacity;
+    }
+
+    public String getAmenities() {
+        return amenities;
+    }
+
+    public void setAmenities(String amenities) {
+        this.amenities = amenities;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public List<Room> getRooms() {
+        return rooms;
+    }
+
+    public void setRooms(List<Room> rooms) {
+        this.rooms = rooms;
+    }
 }
+

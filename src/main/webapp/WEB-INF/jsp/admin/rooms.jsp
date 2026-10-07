@@ -1,6 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 
-<jsp:include page="/WEB-INF/jsp/common/header.jsp">
+<jsp:include page="/WEB-INF/jsp/common/admin-header.jsp">
     <jsp:param name="title" value="Rooms" />
 </jsp:include>
 <jsp:include page="/WEB-INF/jsp/common/admin-sidebar.jsp" />
@@ -148,253 +148,1052 @@
 
 <jsp:include page="/WEB-INF/jsp/common/admin-footer.jsp" />
 <script>
-    const ctx = '<%= request.getContextPath() %>';
-    const token = localStorage.getItem('accessToken');
-    if (!token) { window.location.href = ctx + '/login'; }
 
-    let roomsData = [];   // rooms from GET /api/rooms
-    let typesData = [];   // distinct room types found in those rooms
+    const ctx = '<%= request.getContextPath() %>';
+    const token = localStorage.getItem('token');
+
+    let roomsData = [];
+    let typesData = [];
+
 
     document.addEventListener('DOMContentLoaded', function () {
+
+        console.log('ROOMS PAGE LOADED');
+        console.log('Token exists:', !!token);
+
         loadRooms();
+
+        const q = document.getElementById('q');
+        const type = document.getElementById('type');
+        const status = document.getElementById('status');
+
+        if (q) {
+            q.addEventListener('input', applyFilters);
+        }
+
+        if (type) {
+            type.addEventListener('change', applyFilters);
+        }
+
+        if (status) {
+            status.addEventListener('change', applyFilters);
+        }
     });
 
-    // ---- API helper: adds the token, unwraps ApiResponse errors ----
+
+    /*
+     * =========================================================
+     * API HELPER
+     * =========================================================
+     */
+
     function api(path, options) {
+
         options = options || {};
+
         options.headers = Object.assign({
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
+            'Content-Type': 'application/json'
         }, options.headers || {});
 
-        return fetch(ctx + path, options).then(function (response) {
-            if (response.status === 401) {
-                localStorage.removeItem('accessToken');
-                window.location.href = ctx + '/login';
-                throw new Error('Unauthorized');
-            }
-            return response.json().catch(function () { return {}; }).then(function (body) {
-                if (!response.ok) {
-                    throw new Error(body.message || ('HTTP ' + response.status));
-                }
-                return body;
+        if (token) {
+            options.headers['Authorization'] =
+                'Bearer ' + token;
+        }
+
+        return fetch(ctx + path, options)
+            .then(function (response) {
+
+                console.log(
+                    'API:',
+                    path,
+                    'STATUS:',
+                    response.status
+                );
+
+                return response.json()
+                    .catch(function () {
+                        return {};
+                    })
+                    .then(function (body) {
+
+                        if (!response.ok) {
+
+                            if (response.status === 401) {
+                                localStorage.removeItem('token');
+                            }
+
+                            throw new Error(
+                                body.message ||
+                                ('HTTP ' + response.status)
+                            );
+                        }
+
+                        return body;
+                    });
             });
-        });
     }
 
-    // ---- Load + render ----
-    function loadRooms() {
-        api('/api/rooms', { method: 'GET' })
-            .then(function (res) {
-                roomsData = Array.isArray(res.data) ? res.data : [];
-                buildTypes();
-                applyFilters();
-            })
-            .catch(function (error) {
-                console.error('Error fetching rooms:', error);
-                document.getElementById('roomsTableBody').innerHTML =
-                    '<tr><td colspan="5" class="text-center text-danger py-4">Could not load rooms: ' +
-                    escapeHtml(error.message) + '</td></tr>';
+
+    /*
+     * =========================================================
+     * LOAD ROOMS
+     * =========================================================
+     */
+
+     function loadRooms() {
+
+    	    api('/api/rooms', {
+    	        method: 'GET'
+    	    })
+    	    .then(function(res) {
+
+    	        console.log('ROOM API RESPONSE:', res);
+
+    	        roomsData = Array.isArray(res.data)
+    	            ? res.data
+    	            : [];
+
+    	        console.log('ROOMS DATA:', roomsData);
+
+    	        // IMPORTANT:
+    	        // Room types are extracted only after rooms have loaded.
+    	        loadRoomTypes();
+
+    	        // Build room-type filter
+    	        buildTypeFilter();
+
+    	        // Render rooms
+    	        applyFilters();
+
+    	    })
+    	    .catch(function(error) {
+
+    	        console.error('Error loading rooms:', error);
+
+    	        showAlert(
+    	            'danger',
+    	            'Could not load rooms: ' + escapeHtml(error.message)
+    	        );
+    	    });
+    	}
+
+
+    /*
+     * =========================================================
+     * LOAD ROOM TYPES
+     * =========================================================
+     */
+
+    function loadRoomTypes() {
+
+        /*
+         * We first try the existing room API data.
+         * Every room already contains roomType.
+         */
+
+        const typeMap = {};
+
+        roomsData.forEach(function (room) {
+
+            if (
+                room.roomType &&
+                room.roomType.roomTypeId
+            ) {
+
+                typeMap[
+                    room.roomType.roomTypeId
+                ] = room.roomType;
+            }
+        });
+
+        typesData = Object.keys(typeMap)
+            .map(function (key) {
+                return typeMap[key];
             });
+
+        buildRoomTypeSelect();
     }
 
-    function buildTypes() {
-        const seen = {};
-        typesData = [];
-        roomsData.forEach(function (r) {
-            const t = r.roomType;
-            if (t && t.roomTypeId != null && !seen[t.roomTypeId]) {
-                seen[t.roomTypeId] = true;
-                typesData.push(t);
-            }
-        });
 
-        const filterSel = document.getElementById('type');
-        const keepFilter = filterSel.value;
-        filterSel.innerHTML = '<option value="">All types</option>' + typesData.map(function (t) {
-            return '<option value="' + t.roomTypeId + '">' + escapeHtml(t.typeName) + '</option>';
-        }).join('');
-        filterSel.value = keepFilter;
+    /*
+     * =========================================================
+     * ROOM TYPE FILTER
+     * =========================================================
+     */
 
-        const formSel = document.getElementById('roomTypeSelect');
-        const keepForm = formSel.value;
-        formSel.innerHTML = typesData.map(function (t) {
-            return '<option value="' + t.roomTypeId + '">' + escapeHtml(t.typeName) +
-                   ' ($' + (t.price || 0) + ')</option>';
-        }).join('') + '<option value="new">+ New room type...</option>';
-        formSel.value = keepForm || (typesData.length ? String(typesData[0].roomTypeId) : 'new');
-        if (!formSel.value) formSel.value = 'new';
-        toggleNewType();
-    }
+    function buildTypeFilter() {
 
-    function applyFilters() {
-        const q = document.getElementById('q').value.trim().toLowerCase();
-        const type = document.getElementById('type').value;
-        const status = document.getElementById('status').value;
+        const select =
+            document.getElementById('type');
 
-        const filtered = roomsData.filter(function (r) {
-            if (q) {
-                const hay = ((r.roomNumber || '') + ' ' + (r.description || '')).toLowerCase();
-                if (hay.indexOf(q) === -1) return false;
-            }
-            if (type && String(r.roomType && r.roomType.roomTypeId) !== type) return false;
-            if (status && r.status !== status) return false;
-            return true;
-        });
-        renderRoomsTable(filtered);
-    }
-
-    function renderRoomsTable(rooms) {
-        const tbody = document.getElementById('roomsTableBody');
-        document.getElementById('roomCount').textContent = '(' + rooms.length + ')';
-
-        if (rooms.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">' +
-                '<i class="bi bi-door-closed fs-3 text-secondary"></i>' +
-                '<p class="mb-0 mt-2">No rooms match these filters.</p></td></tr>';
+        if (!select) {
             return;
         }
 
-        tbody.innerHTML = rooms.map(function (room) {
-            let badgeClass = 'status-pending';
-            let statusText = room.status || 'Unknown';
-            if (room.status === 'AVAILABLE') { badgeClass = 'status-confirmed'; statusText = 'Available'; }
-            else if (room.status === 'OCCUPIED') { badgeClass = 'status-checked-in'; statusText = 'Occupied'; }
-            else if (room.status === 'MAINTENANCE') { statusText = 'Maintenance'; }
+        const existingValue =
+            select.value;
 
-            const t = room.roomType || {};
-            return '<tr>' +
-                '<td><div class="fw-medium">Room ' + escapeHtml(room.roomNumber) + '</div>' +
-                '<div class="small text-body-secondary">Floor ' + escapeHtml(room.floor) +
-                (room.description ? ' &middot; ' + escapeHtml(room.description) : '') + '</div></td>' +
-                '<td>' + escapeHtml(t.typeName || '') + '</td>' +
-                '<td>&#36;' + (t.price || 0) + '</td>' +
-                '<td><span class="badge status-badge ' + badgeClass + '">' + escapeHtml(statusText) + '</span></td>' +
-                '<td class="text-end text-nowrap">' +
-                '<button type="button" class="btn btn-sm btn-outline-secondary" onclick="editRoom(' + room.roomId + ')"><i class="bi bi-pencil"></i></button> ' +
-                '<button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteRoom(' + room.roomId + ')"><i class="bi bi-trash"></i></button>' +
-                '</td></tr>';
-        }).join('');
+        const types = {};
+
+        roomsData.forEach(function (room) {
+
+            if (
+                room.roomType &&
+                room.roomType.roomTypeId
+            ) {
+
+                types[
+                    room.roomType.roomTypeId
+                ] = room.roomType.typeName;
+            }
+        });
+
+        select.innerHTML =
+            '<option value="">All types</option>';
+
+        Object.keys(types).forEach(function (id) {
+
+            const option =
+                document.createElement('option');
+
+            option.value = id;
+            option.textContent = types[id];
+
+            select.appendChild(option);
+        });
+
+        select.value = existingValue;
     }
 
-    // ---- Create / update ----
-    function saveRoom(event) {
-        event.preventDefault();
 
-        const id = document.getElementById('roomId').value;
-        const sel = document.getElementById('roomTypeSelect').value;
+    /*
+     * =========================================================
+     * ROOM TYPE FORM SELECT
+     * =========================================================
+     */
 
-        let roomType;
-        if (sel === 'new') {
-            roomType = {
-                typeName: document.getElementById('typeName').value,
-                description: document.getElementById('typeDescription').value,
-                price: parseFloat(document.getElementById('price').value),
-                capacity: parseInt(document.getElementById('capacity').value, 10),
-                amenities: document.getElementById('amenities').value
-            };
-        } else {
-            roomType = typesData.find(function (t) { return String(t.roomTypeId) === sel; });
+    function buildRoomTypeSelect() {
+
+        const select =
+            document.getElementById('roomTypeSelect');
+
+        if (!select) {
+            return;
         }
 
-        const payload = {
-            roomNumber: document.getElementById('roomNumber').value,
-            floor: parseInt(document.getElementById('floor').value, 10),
-            description: document.getElementById('description').value,
-            status: document.getElementById('roomStatus').value,
-            roomType: roomType
-        };
+        select.innerHTML =
+            '<option value="">Select room type</option>';
 
-        const isUpdate = id !== '';
-        if (isUpdate) payload.roomId = parseInt(id, 10);
+        typesData.forEach(function (type) {
 
-        api(isUpdate ? '/api/rooms/' + id : '/api/rooms', {
-            method: isUpdate ? 'PUT' : 'POST',
-            body: JSON.stringify(payload)
-        })
-            .then(function () {
-                showAlert(isUpdate ? 'Room updated successfully.' : 'Room added successfully.', 'success');
-                resetRoomForm();
-                loadRooms();
-            })
-            .catch(function (error) {
-                console.error('Error saving room:', error);
-                showAlert('Could not save room: ' + escapeHtml(error.message), 'danger');
-            });
+            const option =
+                document.createElement('option');
+
+            option.value = type.roomTypeId;
+            option.textContent =
+                type.typeName +
+                (type.price != null
+                    ? ' - $' + type.price
+                    : '');
+
+            select.appendChild(option);
+        });
+
+        select.innerHTML +=
+            '<option value="NEW">+ New room type</option>';
     }
 
-    function deleteRoom(id) {
-        if (!confirm('Remove this room? This cannot be undone.')) return;
 
-        api('/api/rooms/' + id, { method: 'DELETE' })
-            .then(function () {
-                showAlert('Room removed successfully.', 'warning');
-                loadRooms();
-            })
-            .catch(function (error) {
-                console.error('Error deleting room:', error);
-                showAlert('Could not remove room: ' + escapeHtml(error.message), 'danger');
+    /*
+     * =========================================================
+     * FILTER ROOMS
+     * =========================================================
+     */
+
+    function applyFilters() {
+
+        const q =
+            document.getElementById('q');
+
+        const type =
+            document.getElementById('type');
+
+        const status =
+            document.getElementById('status');
+
+
+        const search =
+            q
+                ? q.value.toLowerCase().trim()
+                : '';
+
+
+        const typeId =
+            type
+                ? type.value
+                : '';
+
+
+        const statusValue =
+            status
+                ? status.value
+                : '';
+
+
+        const filtered =
+            roomsData.filter(function (room) {
+
+                const roomNumber =
+                    String(
+                        room.roomNumber || ''
+                    ).toLowerCase();
+
+                const description =
+                    String(
+                        room.description || ''
+                    ).toLowerCase();
+
+                const roomTypeId =
+                    room.roomType &&
+                    room.roomType.roomTypeId
+                        ? String(
+                            room.roomType.roomTypeId
+                        )
+                        : '';
+
+                const roomStatus =
+                    String(room.status || '');
+
+
+                const matchesSearch =
+                    !search ||
+                    roomNumber.includes(search) ||
+                    description.includes(search);
+
+
+                const matchesType =
+                    !typeId ||
+                    roomTypeId === typeId;
+
+
+                const matchesStatus =
+                    !statusValue ||
+                    roomStatus === statusValue;
+
+
+                return (
+                    matchesSearch &&
+                    matchesType &&
+                    matchesStatus
+                );
             });
+
+
+        renderRooms(filtered);
     }
 
-    // ---- Form helpers ----
-    function editRoom(id) {
-        const room = roomsData.find(function (r) { return r.roomId === id; });
-        if (!room) return;
 
-        document.getElementById('roomFormTitle').textContent = 'Edit room ' + room.roomNumber;
-        document.getElementById('roomId').value = room.roomId;
-        document.getElementById('roomNumber').value = room.roomNumber || '';
-        document.getElementById('floor').value = room.floor != null ? room.floor : '';
-        document.getElementById('description').value = room.description || '';
-        document.getElementById('roomStatus').value = room.status || 'AVAILABLE';
-        if (room.roomType && room.roomType.roomTypeId != null) {
-            document.getElementById('roomTypeSelect').value = String(room.roomType.roomTypeId);
+    /*
+     * =========================================================
+     * RENDER TABLE
+     * =========================================================
+     */
+
+    function renderRooms(rooms) {
+
+        const tbody =
+            document.getElementById(
+                'roomsTableBody'
+            );
+
+        const count =
+            document.getElementById(
+                'roomCount'
+            );
+
+
+        if (!tbody) {
+            return;
         }
-        toggleNewType();
-        document.getElementById('roomFormSubmit').textContent = 'Save changes';
-        document.getElementById('roomFormPanel').scrollIntoView({ behavior: 'smooth' });
+
+
+        if (count) {
+            count.textContent =
+                '(' + rooms.length + ')';
+        }
+
+
+        if (rooms.length === 0) {
+
+            tbody.innerHTML =
+                '<tr>' +
+                '<td colspan="5" ' +
+                'class="text-center py-4">' +
+                'No rooms found.' +
+                '</td>' +
+                '</tr>';
+
+            return;
+        }
+
+
+        tbody.innerHTML =
+            rooms.map(function (room) {
+
+                const roomType =
+                    room.roomType
+                        ? room.roomType.typeName || '-'
+                        : '-';
+
+
+                const price =
+                    room.roomType &&
+                    room.roomType.price != null
+                        ? '$' +
+                          Number(
+                              room.roomType.price
+                          ).toFixed(2)
+                        : '-';
+
+
+                const status =
+                    room.status || '-';
+
+
+                return (
+                    '<tr>' +
+
+                    '<td>' +
+                    '<strong>' +
+                    escapeHtml(
+                        room.roomNumber
+                    ) +
+                    '</strong>' +
+                    '</td>' +
+
+                    '<td>' +
+                    escapeHtml(roomType) +
+                    '</td>' +
+
+                    '<td>' +
+                    escapeHtml(price) +
+                    '</td>' +
+
+                    '<td>' +
+                    '<span class="badge ' +
+                    getStatusClass(status) +
+                    '">' +
+                    escapeHtml(status) +
+                    '</span>' +
+                    '</td>' +
+
+                    '<td class="text-end">' +
+
+                    '<button type="button" ' +
+                    'class="btn btn-sm ' +
+                    'btn-outline-primary me-1" ' +
+                    'onclick="editRoom(' +
+                    room.roomId +
+                    ')">' +
+
+                    '<i class="bi bi-pencil"></i>' +
+
+                    '</button>' +
+
+                    '<button type="button" ' +
+                    'class="btn btn-sm ' +
+                    'btn-outline-danger" ' +
+                    'onclick="deleteRoom(' +
+                    room.roomId +
+                    ')">' +
+
+                    '<i class="bi bi-trash"></i>' +
+
+                    '</button>' +
+
+                    '</td>' +
+
+                    '</tr>'
+                );
+
+            }).join('');
     }
+
+
+    /*
+     * =========================================================
+     * STATUS BADGE
+     * =========================================================
+     */
+
+    function getStatusClass(status) {
+
+        switch (
+            String(status).toUpperCase()
+        ) {
+
+            case 'AVAILABLE':
+                return 'bg-success';
+
+            case 'OCCUPIED':
+                return 'bg-danger';
+
+            case 'MAINTENANCE':
+                return 'bg-warning text-dark';
+
+            case 'RESERVED':
+                return 'bg-primary';
+
+            default:
+                return 'bg-secondary';
+        }
+    }
+
+
+    /*
+     * =========================================================
+     * OPEN ADD FORM
+     * =========================================================
+     */
+
+    function openRoomForm() {
+
+        resetRoomForm();
+
+        const panel =
+            document.getElementById(
+                'roomFormPanel'
+            );
+
+        if (panel) {
+            panel.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    }
+
+
+    /*
+     * =========================================================
+     * NEW ROOM TYPE TOGGLE
+     * =========================================================
+     */
 
     function toggleNewType() {
-        const isNew = document.getElementById('roomTypeSelect').value === 'new';
-        document.getElementById('newTypeFields').classList.toggle('d-none', !isNew);
-        ['typeName', 'price', 'capacity'].forEach(function (f) {
-            document.getElementById(f).required = isNew;
+
+        const select =
+            document.getElementById(
+                'roomTypeSelect'
+            );
+
+        const fields =
+            document.getElementById(
+                'newTypeFields'
+            );
+
+
+        if (!select || !fields) {
+            return;
+        }
+
+
+        if (select.value === 'NEW') {
+
+            fields.classList.remove('d-none');
+
+        } else {
+
+            fields.classList.add('d-none');
+        }
+    }
+
+
+    /*
+     * =========================================================
+     * SAVE ROOM
+     * =========================================================
+     */
+
+    function saveRoom(event) {
+
+        event.preventDefault();
+
+
+        const roomId =
+            document.getElementById(
+                'roomId'
+            ).value;
+
+
+        const roomNumber =
+            document.getElementById(
+                'roomNumber'
+            ).value.trim();
+
+
+        const floor =
+            document.getElementById(
+                'floor'
+            ).value;
+
+
+        const description =
+            document.getElementById(
+                'description'
+            ).value.trim();
+
+
+        const roomTypeId =
+            document.getElementById(
+                'roomTypeSelect'
+            ).value;
+
+
+        const status =
+            document.getElementById(
+                'roomStatus'
+            ).value;
+
+
+        if (!roomNumber) {
+
+            showAlert(
+                'warning',
+                'Room number is required.'
+            );
+
+            return;
+        }
+
+
+        if (!roomTypeId) {
+            showAlert(
+                'warning',
+                'Please select a room type.'
+            );
+            return;
+        }
+
+        if (roomTypeId === 'NEW') {
+            showAlert(
+                'warning',
+                'Creating a new room type is not available yet. Please select an existing room type.'
+            );
+            return;
+        }
+
+
+        /*
+         * -----------------------------------------------------
+         * IMPORTANT
+         *
+         * This is the JSON we will send to the backend.
+         * We will adjust it if your existing API expects
+         * a different DTO.
+         * -----------------------------------------------------
+         */
+
+        const roomData = {
+
+            roomNumber: roomNumber,
+
+            floor: floor
+                ? Number(floor)
+                : null,
+
+            description: description,
+
+            status: status,
+
+            roomType: {
+                roomTypeId: Number(roomTypeId)
+            }
+        };
+
+
+        const method =
+            roomId
+                ? 'PUT'
+                : 'POST';
+
+
+        const url =
+            roomId
+                ? '/api/rooms/' + roomId
+                : '/api/rooms';
+
+
+        const submitButton =
+            document.getElementById(
+                'roomFormSubmit'
+            );
+
+
+        if (submitButton) {
+            submitButton.disabled = true;
+        }
+
+
+        api(url, {
+
+            method: method,
+
+            body: JSON.stringify(roomData)
+
+        })
+
+        .then(function (res) {
+
+            console.log(
+                'SAVE ROOM RESPONSE:',
+                res
+            );
+
+            showAlert(
+                'success',
+                res.message ||
+                (
+                    roomId
+                        ? 'Room updated successfully.'
+                        : 'Room added successfully.'
+                )
+            );
+
+            resetRoomForm();
+
+            return loadRooms();
+        })
+
+        .catch(function (error) {
+
+            console.error(
+                'Error saving room:',
+                error
+            );
+
+            showAlert(
+                'danger',
+                error.message ||
+                'Could not save room.'
+            );
+        })
+
+        .finally(function () {
+
+            if (submitButton) {
+                submitButton.disabled = false;
+            }
         });
     }
 
-    function openRoomForm() {
-        resetRoomForm();
-        document.getElementById('roomFormPanel').scrollIntoView({ behavior: 'smooth' });
+
+    /*
+     * =========================================================
+     * EDIT ROOM
+     * =========================================================
+     */
+
+    function editRoom(roomId) {
+
+        const room =
+            roomsData.find(function (item) {
+                return Number(item.roomId) ===
+                       Number(roomId);
+            });
+
+
+        if (!room) {
+            showAlert(
+                'danger',
+                'Room not found.'
+            );
+
+            return;
+        }
+
+
+        document.getElementById(
+            'roomId'
+        ).value = room.roomId;
+
+
+        document.getElementById(
+            'roomNumber'
+        ).value = room.roomNumber || '';
+
+
+        document.getElementById(
+            'floor'
+        ).value =
+            room.floor != null
+                ? room.floor
+                : '';
+
+
+        document.getElementById(
+            'description'
+        ).value =
+            room.description || '';
+
+
+        document.getElementById(
+            'roomStatus'
+        ).value =
+            room.status || 'AVAILABLE';
+
+
+        const roomTypeSelect =
+            document.getElementById(
+                'roomTypeSelect'
+            );
+
+
+        if (
+            room.roomType &&
+            room.roomType.roomTypeId
+        ) {
+
+            roomTypeSelect.value =
+                room.roomType.roomTypeId;
+        }
+
+
+        toggleNewType();
+
+
+        document.getElementById(
+            'roomFormTitle'
+        ).textContent = 'Edit room';
+
+
+        document.getElementById(
+            'roomFormSubmit'
+        ).textContent = 'Update room';
+
+
+        document.getElementById(
+            'roomFormPanel'
+        ).scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
     }
+
+
+    /*
+     * =========================================================
+     * DELETE ROOM
+     * =========================================================
+     */
+
+    function deleteRoom(roomId) {
+
+        const room =
+            roomsData.find(function (item) {
+                return Number(item.roomId) ===
+                       Number(roomId);
+            });
+
+
+        if (!room) {
+            return;
+        }
+
+
+        if (
+            !confirm(
+                'Delete room ' +
+                room.roomNumber +
+                '?'
+            )
+        ) {
+            return;
+        }
+
+
+        api(
+            '/api/rooms/' + roomId,
+            {
+                method: 'DELETE'
+            }
+        )
+
+        .then(function (res) {
+
+            showAlert(
+                'success',
+                res.message ||
+                'Room deleted successfully.'
+            );
+
+            return loadRooms();
+        })
+
+        .catch(function (error) {
+
+            console.error(
+                'Error deleting room:',
+                error
+            );
+
+            showAlert(
+                'danger',
+                error.message ||
+                'Could not delete room.'
+            );
+        });
+    }
+
+
+    /*
+     * =========================================================
+     * RESET ROOM FORM
+     * =========================================================
+     */
 
     function resetRoomForm() {
-        document.getElementById('roomFormTitle').textContent = 'Add a room';
-        document.getElementById('roomId').value = '';
-        document.getElementById('roomForm').reset();
-        document.getElementById('roomFormSubmit').textContent = 'Add room';
-        buildTypes();
+
+        const form =
+            document.getElementById(
+                'roomForm'
+            );
+
+        if (form) {
+            form.reset();
+        }
+
+
+        document.getElementById(
+            'roomId'
+        ).value = '';
+
+
+        document.getElementById(
+            'roomFormTitle'
+        ).textContent =
+            'Add a room';
+
+
+        document.getElementById(
+            'roomFormSubmit'
+        ).textContent =
+            'Add room';
+
+
+        const status =
+            document.getElementById(
+                'roomStatus'
+            );
+
+        if (status) {
+            status.value = 'AVAILABLE';
+        }
+
+
+        const fields =
+            document.getElementById(
+                'newTypeFields'
+            );
+
+        if (fields) {
+            fields.classList.add('d-none');
+        }
+
+
+        const typeSelect =
+            document.getElementById(
+                'roomTypeSelect'
+            );
+
+        if (typeSelect) {
+            typeSelect.value = '';
+        }
     }
 
+
+    /*
+     * =========================================================
+     * RESET FILTERS
+     * =========================================================
+     */
+
     function resetFilters() {
-        document.getElementById('filterForm').reset();
+
+        const form =
+            document.getElementById(
+                'filterForm'
+            );
+
+        if (form) {
+            form.reset();
+        }
+
         applyFilters();
     }
 
-    function showAlert(message, type) {
-        document.getElementById('alertContainer').innerHTML =
-            '<div class="alert alert-' + type + ' alert-dismissible fade show mb-4" role="alert">' +
+
+    /*
+     * =========================================================
+     * ALERT
+     * =========================================================
+     */
+
+    function showAlert(type, message) {
+
+        const container =
+            document.getElementById(
+                'alertContainer'
+            );
+
+        if (!container) {
+            return;
+        }
+
+
+        container.innerHTML =
+            '<div class="alert alert-' +
+            type +
+            ' alert-dismissible fade show" ' +
+            'role="alert">' +
+
             message +
-            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+
+            '<button type="button" ' +
+            'class="btn-close" ' +
+            'data-bs-dismiss="alert">' +
+            '</button>' +
+
+            '</div>';
     }
 
-    function escapeHtml(str) {
-        return String(str == null ? '' : str)
+
+    /*
+     * =========================================================
+     * ESCAPE HTML
+     * =========================================================
+     */
+
+    function escapeHtml(value) {
+
+        if (
+            value === null ||
+            value === undefined
+        ) {
+            return '';
+        }
+
+        return String(value)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
     }
+
 </script>
+
+
+
+
+

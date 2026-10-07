@@ -1,3 +1,4 @@
+
 package com.hotel.controller;
 
 import com.hotel.model.Reservation;
@@ -20,164 +21,160 @@ import java.util.List;
 @RequestMapping("/admin")
 public class AdminController {
 
+    @Autowired
+    private ReservationRepository reservationRepository;
 
-@Autowired
-private ReservationRepository reservationRepository;
+    @Autowired
+    private RoomRepository roomRepository;
 
-@Autowired
-private RoomRepository roomRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-@Autowired
-private UserRepository userRepository;
+    @GetMapping("")
+    public String dashboard(
+            HttpSession session,
+            Model model) {
 
+        User loggedInUser =
+                (User) session.getAttribute("user");
 
-@GetMapping
-public String dashboard(
-        HttpSession session,
-        Model model) {
+        if (loggedInUser == null) {
+            return "redirect:/login";
+        }
 
-    User loggedInUser =
-            (User) session.getAttribute("user");
+        if (!isAdmin(loggedInUser)) {
+            return "redirect:/rooms";
+        }
 
-    if (loggedInUser == null) {
-        return "redirect:/login";
+        List<Reservation> reservations =
+                reservationRepository.findAll();
+
+        long totalReservations = reservations.size();
+
+        long pendingReservations =
+                reservations.stream()
+                        .filter(r ->
+                                "PENDING".equalsIgnoreCase(r.getStatus()))
+                        .count();
+
+        long confirmedReservations =
+                reservations.stream()
+                        .filter(r ->
+                                "CONFIRMED".equalsIgnoreCase(r.getStatus()))
+                        .count();
+
+        long cancelledReservations =
+                reservations.stream()
+                        .filter(r ->
+                                "CANCELLED".equalsIgnoreCase(r.getStatus()))
+                        .count();
+
+        long totalRooms = roomRepository.count();
+        long totalUsers = userRepository.count();
+
+        model.addAttribute("totalReservations", totalReservations);
+        model.addAttribute("pendingReservations", pendingReservations);
+        model.addAttribute("confirmedReservations", confirmedReservations);
+        model.addAttribute("cancelledReservations", cancelledReservations);
+        model.addAttribute("totalRooms", totalRooms);
+        model.addAttribute("totalUsers", totalUsers);
+
+        return "admin/dashboard";
     }
 
-    if (!isAdmin(loggedInUser)) {
-        return "redirect:/rooms";
+    @GetMapping("/reservations")
+    public String reservations(
+            HttpSession session,
+            Model model) {
+
+        User loggedInUser =
+                (User) session.getAttribute("user");
+
+        if (loggedInUser == null) {
+            return "redirect:/login";
+        }
+
+        if (!isAdmin(loggedInUser)) {
+            return "redirect:/rooms";
+        }
+
+        List<Reservation> reservations =
+                reservationRepository.findAll();
+
+        model.addAttribute("reservations", reservations);
+
+        return "admin/reservations";
     }
 
-    List<Reservation> reservations =
-            reservationRepository.findAll();
+    @GetMapping("/rooms")
+    public String rooms(HttpSession session) {
 
-    long totalReservations =
-            reservations.size();
+        User loggedInUser =
+                (User) session.getAttribute("user");
 
-    long pendingReservations =
-            reservations.stream()
-                    .filter(r ->
-                            "PENDING".equalsIgnoreCase(
-                                    r.getStatus()
-                            ))
-                    .count();
+        if (loggedInUser == null) {
+            return "redirect:/login";
+        }
 
-    long confirmedReservations =
-            reservations.stream()
-                    .filter(r ->
-                            "CONFIRMED".equalsIgnoreCase(
-                                    r.getStatus()
-                            ))
-                    .count();
+        if (!isAdmin(loggedInUser)) {
+            return "redirect:/rooms";
+        }
 
-    long cancelledReservations =
-            reservations.stream()
-                    .filter(r ->
-                            "CANCELLED".equalsIgnoreCase(
-                                    r.getStatus()
-                            ))
-                    .count();
+        return "admin/rooms";
+    }
+    
+    @GetMapping("/room-types")
+    public String roomTypes(HttpSession session) {
 
-    long totalRooms =
-            roomRepository.count();
+        User u = (User) session.getAttribute("user");
 
-    long totalUsers =
-            userRepository.count();
+        if (u == null) {
+            return "redirect:/login";
+        }
 
-    model.addAttribute(
-            "totalReservations",
-            totalReservations
-    );
+        if (!isAdmin(u)) {
+            return "redirect:/rooms";
+        }
 
-    model.addAttribute(
-            "pendingReservations",
-            pendingReservations
-    );
+        return "admin/room-types";
+    }
+    
+    @GetMapping("/customers")
+    public String customers(HttpSession session) {
 
-    model.addAttribute(
-            "confirmedReservations",
-            confirmedReservations
-    );
+        User u = (User) session.getAttribute("user");
 
-    model.addAttribute(
-            "cancelledReservations",
-            cancelledReservations
-    );
+        if (u == null) {
+            return "redirect:/login";
+        }
 
-    model.addAttribute(
-            "totalRooms",
-            totalRooms
-    );
+        if (!isAdmin(u)) {
+            return "redirect:/rooms";
+        }
 
-    model.addAttribute(
-            "totalUsers",
-            totalUsers
-    );
-
-    return "admin/dashboard";
-}
-
-
-@GetMapping("/reservations")
-public String reservations(
-        HttpSession session,
-        Model model) {
-
-    User loggedInUser =
-            (User) session.getAttribute("user");
-
-    if (loggedInUser == null) {
-        return "redirect:/login";
+        return "admin/customers";
     }
 
-    if (!isAdmin(loggedInUser)) {
-        return "redirect:/rooms";
+    private boolean isAdmin(User user) {
+
+        if (user == null) {
+            return false;
+        }
+
+        if ("ADMIN".equalsIgnoreCase(user.getRole())
+                || "ROLE_ADMIN".equalsIgnoreCase(user.getRole())) {
+            return true;
+        }
+
+        if (user.getRoles() != null) {
+            return user.getRoles()
+                    .stream()
+                    .anyMatch(role ->
+                            "ADMIN".equalsIgnoreCase(role.getName())
+                                    || "ROLE_ADMIN".equalsIgnoreCase(role.getName()));
+        }
+
+        return false;
     }
-
-    List<Reservation> reservations =
-            reservationRepository.findAll();
-
-    model.addAttribute(
-            "reservations",
-            reservations
-    );
-
-    return "admin/reservations";
-}
-
-@GetMapping("/rooms")
-public String rooms(HttpSession session) {
-    User u = (User) session.getAttribute("user");
-    if (u == null) return "redirect:/login";
-    if (!isAdmin(u)) return "redirect:/rooms";
-    return "admin/rooms";
-}
-
-private boolean isAdmin(User user) {
-
-
-if (user == null) {
-    return false;
-}
-
-// Check the role column in users table
-if ("ADMIN".equalsIgnoreCase(user.getRole())
-        || "ROLE_ADMIN".equalsIgnoreCase(user.getRole())) {
-    return true;
-}
-
-// Also check the user_roles relationship
-if (user.getRoles() != null) {
-
-    return user.getRoles()
-            .stream()
-            .anyMatch(role ->
-                    "ADMIN".equalsIgnoreCase(role.getName())
-                            || "ROLE_ADMIN".equalsIgnoreCase(role.getName())
-            );
-}
-
-return false;
-
-}
 }
 

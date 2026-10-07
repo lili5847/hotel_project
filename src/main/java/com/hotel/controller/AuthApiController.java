@@ -22,8 +22,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 
 import java.util.Optional;
 
@@ -48,7 +53,6 @@ public class AuthApiController {
     @Autowired
     private UserRepository userRepository;
 
-
     // ==========================================
     // REGISTER
     // POST /api/auth/register
@@ -62,8 +66,7 @@ public class AuthApiController {
     public ResponseEntity<ApiResponse<String>> register(
             @Valid @RequestBody RegisterRequest registerRequest) {
 
-        String message =
-                authService.registerUser(registerRequest);
+        String message = authService.registerUser(registerRequest);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -75,13 +78,12 @@ public class AuthApiController {
                 );
     }
 
-
     // ==========================================
     // LOGIN
     // POST /api/auth/login
     // ==========================================
 
-
+    
     @PostMapping("/login")
     @Operation(
             summary = "Login User",
@@ -89,9 +91,11 @@ public class AuthApiController {
     )
     public ResponseEntity<ApiResponse<JwtAuthResponse>> login(
             @Valid @RequestBody LoginRequest loginRequest,
+            HttpServletRequest request,
+            HttpServletResponse response,
             HttpSession session) {
 
-        // Authenticate username/email + password
+        // 1. Authenticate username/email + password
         Authentication authentication =
                 authenticationManager.authenticate(
                         new UsernamePasswordAuthenticationToken(
@@ -100,21 +104,25 @@ public class AuthApiController {
                         )
                 );
 
-        // Put authentication into SecurityContext
-        SecurityContextHolder.getContext()
-                .setAuthentication(authentication);
+        // 2. Create SecurityContext
+        SecurityContext securityContext =
+                SecurityContextHolder.createEmptyContext();
 
-        // Explicitly save SecurityContext into HTTP session
-        session.setAttribute(
-                "SPRING_SECURITY_CONTEXT",
-                SecurityContextHolder.getContext()
+        securityContext.setAuthentication(authentication);
+
+        SecurityContextHolder.setContext(securityContext);
+
+        // 3. Save SecurityContext into HTTP session
+        HttpSessionSecurityContextRepository securityContextRepository =
+                new HttpSessionSecurityContextRepository();
+
+        securityContextRepository.saveContext(
+                securityContext,
+                request,
+                response
         );
 
-        // Generate JWT
-        String token =
-                tokenProvider.generateToken(authentication);
-
-        // Find user
+        // 4. Find application User
         String usernameOrEmail =
                 loginRequest.getUsernameOrEmail();
 
@@ -131,22 +139,25 @@ public class AuthApiController {
                         new RuntimeException("រកមិនឃើញ User!")
                 );
 
-        // Save application user into session
+        // 5. Save application User into session
         session.setAttribute("user", user);
 
-        // Return JWT
-        JwtAuthResponse response =
+        // 6. Generate JWT
+        String token =
+                tokenProvider.generateToken(authentication);
+
+        // 7. Return JWT
+        JwtAuthResponse authResponse =
                 new JwtAuthResponse(token);
 
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "ចូលប្រើប្រាស់ជោគជ័យ",
-                        response
+                        authResponse
                 )
         );
     }
- 
-
 }
+
 
 

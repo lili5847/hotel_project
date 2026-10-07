@@ -38,10 +38,10 @@
                 <c:choose>
                     <c:when test="${empty sessionScope.user}">
                         <li class="nav-item">
-                            <a class="btn btn-outline-primary btn-sm px-3" href="${ctx}/Customer/login.jsp">Log in</a>
+                            <a class="btn btn-outline-primary btn-sm px-3" href="${ctx}/Customer/login">Log in</a>
                         </li>
                         <li class="nav-item">
-                            <a class="btn btn-primary btn-sm px-3" href="${ctx}/Customer/register.jsp">Create account</a>
+                            <a class="btn btn-primary btn-sm px-3" href="${ctx}/Customer/register">Create account</a>
                         </li>
                     </c:when>
                     <c:otherwise>

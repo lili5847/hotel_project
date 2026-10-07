@@ -1,283 +1,691 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 
-<jsp:include page="/WEB-INF/jsp/common/header.jsp">
-    <jsp:param name="title" value="Reservations" />
-</jsp:include>
-<jsp:include page="/WEB-INF/jsp/common/admin-sidebar.jsp" />
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
-<!-- Dynamic Alert Container -->
-<div id="alertContainer"></div>
+<!DOCTYPE html>
+<html lang="en">
 
-<!-- Filter Panel -->
-<div class="panel mb-4">
-    <div class="panel-header">
-        <h2 class="h5 mb-0">Filter reservations</h2>
-    </div>
-    <form id="filterForm" class="p-3" onsubmit="event.preventDefault(); loadReservations(1);">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label for="q" class="form-label">Guest name or email</label>
-                <input type="text" class="form-control" id="q" name="q" placeholder="Search guest">
-            </div>
-            <div class="col-md-2">
-                <label for="status" class="form-label">Status</label>
-                <select class="form-select" id="status" name="status">
-                    <option value="">All statuses</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="CONFIRMED">Confirmed</option>
-                    <option value="CHECKED_IN">Checked in</option>
-                    <option value="CANCELLED">Cancelled</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label for="from" class="form-label">From</label>
-                <input type="date" class="form-control" id="from" name="from">
-            </div>
-            <div class="col-md-2">
-                <label for="to" class="form-label">To</label>
-                <input type="date" class="form-control" id="to" name="to">
-            </div>
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary flex-grow-1">
-                    <i class="bi bi-funnel me-1"></i>Apply
-                </button>
-                <button type="button" class="btn btn-outline-secondary" onclick="resetFilters()">Reset</button>
-            </div>
-        </div>
-    </form>
-</div>
+<head>
 
-<!-- Reservations Table Panel -->
-<div class="panel">
-    <div class="panel-header">
-        <h2 class="h5 mb-0">
-            Reservations
-            <span id="reservationCount" class="text-body-secondary fw-normal"></span>
-        </h2>
-    </div>
+    <meta charset="UTF-8">
 
-    <div class="table-responsive">
-        <table class="table admin-table align-middle mb-0">
-            <thead>
-            <tr>
-                <th>Guest</th>
-                <th>Room</th>
-                <th>Check-in</th>
-                <th>Check-out</th>
-                <th>Nights</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th class="text-end">Actions</th>
-            </tr>
-            </thead>
-            <tbody id="reservationsTableBody">
-            <tr>
-                <td colspan="8" class="text-center py-4">Loading data...</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-    <!-- Dynamic Pagination -->
-    <nav class="d-flex justify-content-center py-3" aria-label="Reservations pages">
-        <ul class="pagination mb-0" id="pagination"></ul>
-    </nav>
-</div>
+    <title>Reservations - Hotel Admin</title>
 
-<jsp:include page="/WEB-INF/jsp/common/admin-footer.jsp" />
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
 
-<!-- ============================================================
-JAVASCRIPT FETCH API INTEGRATION FOR RESERVATIONS
-============================================================ -->
-<script>
-	const ctx = '<%= request.getContextPath() %>';
-    let currentPage = 1;
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        rel="stylesheet">
 
-    document.addEventListener("DOMContentLoaded", function () {
-        loadReservations(1);
-    });
+    <style>
 
-    function loadReservations(page = 1) {
-        currentPage = page;
-        const token = localStorage.getItem('accessToken');
-
-        const q = document.getElementById('q').value;
-        const status = document.getElementById('status').value;
-        const from = document.getElementById('from').value;
-        const to = document.getElementById('to').value;
-
-        let params = new URLSearchParams();
-        params.append('page', page);
-        if (q) params.append('q', q);
-        if (status) params.append('status', status);
-        if (from) params.append('from', from);
-        if (to) params.append('to', to);
-
-        fetch(`${ctx}/api/admin/reservations?${params.toString()}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            }
-        })
-            .then(response => {
-                if (!response.ok) throw new Error('Failed to fetch reservations');
-                return response.json();
-            })
-            .then(data => {
-                const reservations = Array.isArray(data) ? data : (data.content || data.data || []);
-                const totalPages = data.totalPages || 1;
-
-                renderReservationsTable(reservations);
-                renderPagination(totalPages, currentPage);
-            })
-            .catch(error => {
-                console.error('Error fetching reservations:', error);
-                document.getElementById('reservationsTableBody').innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center text-danger py-4">
-                    Nakamaisyu ti panag-fetch ti datos dagiti reservation.
-                </td>
-            </tr>`;
-            });
-    }
-
-    function renderReservationsTable(reservations) {
-        const tbody = document.getElementById('reservationsTableBody');
-        const countSpan = document.getElementById('reservationCount');
-
-        countSpan.textContent = `(${reservations.length} shown)`;
-
-        if (reservations.length === 0) {
-            tbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center py-4">
-                    <i class="bi bi-journal-x fs-3 text-secondary"></i>
-                    <p class="mb-0 mt-2">No reservations match these filters.</p>
-                </td>
-            </tr>`;
-            return;
+        body {
+            background: #f5f7fa;
         }
 
-        let html = '';
-        reservations.forEach(r => {
-            let badgeClass = 'status-pending';
-            let statusText = 'Pending';
+        .sidebar {
+            min-height: 100vh;
+            background: #212529;
+        }
 
-            if (r.status === 'CONFIRMED') {
-                badgeClass = 'status-confirmed';
-                statusText = 'Confirmed';
-            } else if (r.status === 'CHECKED_IN') {
-                badgeClass = 'status-checked-in';
-                statusText = 'Checked in';
-            } else if (r.status === 'CANCELLED') {
-                badgeClass = 'status-cancelled';
-                statusText = 'Cancelled';
-            }
+        .sidebar a {
+            display: block;
+            padding: 12px 20px;
+            color: #adb5bd;
+            text-decoration: none;
+        }
 
-            let actionsHtml = `<div class="d-inline-flex gap-1">`;
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: #343a40;
+            color: white;
+        }
 
-            if (r.status === 'PENDING') {
-                actionsHtml += `
-                <button type="button" class="btn btn-sm btn-outline-primary" title="Confirm" onclick="updateReservationStatus(${r.id}, 'confirm')">
-                    <i class="bi bi-check2"></i>
-                </button>`;
-            }
-            if (r.status === 'CONFIRMED') {
-                actionsHtml += `
-                <button type="button" class="btn btn-sm btn-outline-primary" title="Check in" onclick="updateReservationStatus(${r.id}, 'check_in')">
-                    <i class="bi bi-box-arrow-in-right"></i>
-                </button>`;
-            }
-            if (r.status !== 'CANCELLED' && r.status !== 'CHECKED_IN') {
-                actionsHtml += `
-                <button type="button" class="btn btn-sm btn-outline-danger" title="Cancel" onclick="updateReservationStatus(${r.id}, 'cancel')">
-                    <i class="bi bi-x-lg"></i>
-                </button>`;
-            }
+        .content {
+            padding: 30px;
+        }
 
-            actionsHtml += `
-            <a href="${ctx}/admin/reservations?id=${r.id}" class="btn btn-sm btn-outline-secondary" title="View details">
-                <i class="bi bi-eye"></i>
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .status-badge {
+            padding: 7px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .table th {
+            white-space: nowrap;
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<%
+    String ctx = request.getContextPath();
+%>
+
+<div class="container-fluid">
+
+    <div class="row">
+
+        <!-- SIDEBAR -->
+        <div class="col-md-3 col-lg-2 px-0 sidebar">
+
+            <div class="p-4 text-white">
+
+                <h4>
+                    <i class="bi bi-building me-2"></i>
+                    Hotel Admin
+                </h4>
+
+            </div>
+
+            <a href="<%= ctx %>/admin">
+                <i class="bi bi-speedometer2 me-2"></i>
+                Dashboard
             </a>
-        </div>`;
 
-            html += `
-            <tr>
-                <td>
-                    <div class="fw-medium">${r.guestName || 'N/A'}</div>
-                    <div class="small text-body-secondary">${r.guestEmail || ''}</div>
-                </td>
-                <td>${r.roomLabel || 'N/A'}</td>
-                <td>${r.checkIn || 'N/A'}</td>
-                <td>${r.checkOut || 'N/A'}</td>
-                <td>${r.nights || 0}</td>
-                <td>&#36;${r.total || 0}</td>
-                <td>
-                    <span class="badge status-badge ${badgeClass}">${statusText}</span>
-                </td>
-                <td class="text-end text-nowrap">${actionsHtml}</td>
-            </tr>`;
-        });
+            <a href="<%= ctx %>/admin/reservations"
+               class="active">
+                <i class="bi bi-calendar-check me-2"></i>
+                Reservations
+            </a>
 
-        tbody.innerHTML = html;
+            <a href="<%= ctx %>/admin/rooms">
+                <i class="bi bi-door-open me-2"></i>
+                Rooms
+            </a>
+
+            <a href="<%= ctx %>/admin/room-types">
+                <i class="bi bi-grid me-2"></i>
+                Room Types
+            </a>
+
+            <a href="<%= ctx %>/admin/customers">
+                <i class="bi bi-people me-2"></i>
+                Customers
+            </a>
+
+            <hr class="text-secondary">
+
+            <a href="<%= ctx %>/rooms">
+                <i class="bi bi-house me-2"></i>
+                Customer Site
+            </a>
+
+            <a href="<%= ctx %>/login"
+               onclick="localStorage.removeItem('accessToken');
+                        localStorage.removeItem('token');">
+
+                <i class="bi bi-box-arrow-right me-2"></i>
+                Logout
+
+            </a>
+
+        </div>
+
+
+        <!-- CONTENT -->
+        <div class="col-md-9 col-lg-10">
+
+            <div class="content">
+
+                <div class="mb-4">
+
+                    <h2 class="fw-bold">
+                        <i class="bi bi-calendar-check me-2"></i>
+                        Reservations
+                    </h2>
+
+                    <p class="text-muted">
+                        Manage hotel reservations
+                    </p>
+
+                </div>
+
+
+                <div class="card">
+
+                    <div class="card-body">
+
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+
+                            <h5 class="fw-bold mb-0">
+                                Reservation List
+                            </h5>
+
+                            <span id="reservationCount"
+                                  class="badge bg-primary">
+                                0 Reservations
+                            </span>
+
+                        </div>
+
+
+                        <div id="alertBox"
+                             class="alert d-none"
+                             role="alert">
+                        </div>
+
+
+                        <div class="table-responsive">
+
+                            <table class="table table-hover align-middle">
+
+                                <thead class="table-light">
+
+                                <tr>
+
+                                    <th>ID</th>
+                                    <th>Customer</th>
+                                    <th>Room</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Guests</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+
+                                </tr>
+
+                                </thead>
+
+                                <tbody id="reservationTableBody">
+
+                                <tr>
+
+                                    <td colspan="9"
+                                        class="text-center text-muted py-5">
+
+                                        <div class="spinner-border text-primary mb-3">
+                                        </div>
+
+                                        <div>
+                                            Loading reservations...
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    const contextPath = "<%= ctx %>";
+
+
+    function getToken() {
+
+        return localStorage.getItem("token")
+            || localStorage.getItem("accessToken");
+
     }
 
-    function updateReservationStatus(id, action) {
-        if (action === 'cancel' && !confirm('Cancel this reservation?')) return;
-
-        const token = localStorage.getItem('accessToken');
-
-        fetch(`${ctx}/api/admin/reservations/${id}/${action}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            }
-        })
-            .then(response => {
-                if (response.ok) {
-                    showAlert('Reservation status updated successfully!', 'success');
-                    loadReservations(currentPage);
-                } else {
-                    showAlert('Something went wrong. Please try again.', 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error updating reservation:', error);
-                showAlert('Something went wrong. Please try again.', 'danger');
-            });
-    }
-
-    function renderPagination(totalPages, currentPage) {
-        const paginationUl = document.getElementById('pagination');
-        if (totalPages <= 1) {
-            paginationUl.innerHTML = '';
-            return;
-        }
-
-        let html = '';
-        for (let i = 1; i <= totalPages; i++) {
-            const activeClass = i === currentPage ? 'active' : '';
-            html += `
-            <li class="page-item ${activeClass}">
-                <button class="page-link" onclick="loadReservations(${i})">${i}</button>
-            </li>`;
-        }
-        paginationUl.innerHTML = html;
-    }
-
-    function resetFilters() {
-        document.getElementById('filterForm').reset();
-        loadReservations(1);
-    }
 
     function showAlert(message, type) {
-        const alertContainer = document.getElementById('alertContainer');
-        alertContainer.innerHTML = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>`;
+
+        const alertBox =
+            document.getElementById("alertBox");
+
+        alertBox.className =
+            "alert alert-" + type;
+
+        alertBox.textContent = message;
+
+        alertBox.classList.remove("d-none");
+
+        setTimeout(function () {
+
+            alertBox.classList.add("d-none");
+
+        }, 3000);
+
     }
+
+
+    function getStatusBadge(status) {
+
+        if (!status) {
+
+            return `
+                <span class="badge bg-secondary status-badge">
+                    UNKNOWN
+                </span>
+            `;
+
+        }
+
+        if (status.toUpperCase() === "PENDING") {
+
+            return `
+                <span class="badge bg-warning text-dark status-badge">
+                    <i class="bi bi-clock me-1"></i>
+                    Pending
+                </span>
+            `;
+
+        }
+
+        if (status.toUpperCase() === "CONFIRMED") {
+
+            return `
+                <span class="badge bg-success status-badge">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Confirmed
+                </span>
+            `;
+
+        }
+
+        if (status.toUpperCase() === "CANCELLED") {
+
+            return `
+                <span class="badge bg-danger status-badge">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Cancelled
+                </span>
+            `;
+
+        }
+
+        return `
+            <span class="badge bg-secondary status-badge">
+                ${status}
+            </span>
+        `;
+
+    }
+
+
+    function getCustomerName(reservation) {
+
+        if (reservation.customer) {
+
+            if (reservation.customer.user) {
+
+                return reservation.customer.user.fullName
+                    || reservation.customer.user.username
+                    || reservation.customer.user.email
+                    || "Unknown";
+
+            }
+
+            return reservation.customer.fullName
+                || reservation.customer.username
+                || reservation.customer.email
+                || "Unknown";
+
+        }
+
+        return "Unknown";
+
+    }
+
+
+    function getRoomNumber(reservation) {
+
+        if (reservation.room) {
+
+            return reservation.room.roomNumber
+                || reservation.room.roomId
+                || "Unknown";
+
+        }
+
+        return "Unknown";
+
+    }
+
+
+    function loadReservations() {
+
+        const token = getToken();
+
+        fetch(
+            contextPath + "/api/reservations",
+            {
+                method: "GET",
+
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Content-Type": "application/json"
+                }
+            }
+        )
+
+        .then(response => {
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Failed to load reservations. HTTP "
+                    + response.status
+                );
+
+            }
+
+            return response.json();
+
+        })
+
+        .then(result => {
+
+            const reservations =
+                result.data || [];
+
+            const tableBody =
+                document.getElementById(
+                    "reservationTableBody"
+                );
+
+            const count =
+                document.getElementById(
+                    "reservationCount"
+                );
+
+
+            count.textContent =
+                reservations.length +
+                " Reservations";
+
+
+            if (reservations.length === 0) {
+
+                tableBody.innerHTML = `
+
+                    <tr>
+
+                        <td colspan="9"
+                            class="text-center text-muted py-5">
+
+                            <i class="bi bi-calendar-x display-5"></i>
+
+                            <div class="mt-3">
+                                No reservations found.
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                `;
+
+                return;
+
+            }
+
+
+            tableBody.innerHTML = "";
+
+
+            reservations.forEach(function (reservation) {
+
+                const status =
+                    reservation.status || "UNKNOWN";
+
+
+                let actionHtml = "";
+
+
+                if (status.toUpperCase() === "PENDING") {
+
+                    actionHtml =
+
+                        '<button type="button" ' +
+                        'class="btn btn-success btn-sm" ' +
+                        'onclick="confirmReservation(' +
+                        reservation.bookingId +
+                        ')">' +
+
+                        '<i class="bi bi-check-circle me-1"></i>' +
+                        'Confirm' +
+
+                        '</button>';
+
+                }
+
+
+                if (status.toUpperCase() === "CONFIRMED") {
+
+                    actionHtml =
+
+                        '<span class="text-success fw-semibold">' +
+
+                        '<i class="bi bi-check-circle me-1"></i>' +
+                        'Confirmed' +
+
+                        '</span>';
+
+                }
+
+
+                if (status.toUpperCase() === "CANCELLED") {
+
+                    actionHtml =
+
+                        '<span class="text-danger fw-semibold">' +
+
+                        '<i class="bi bi-x-circle me-1"></i>' +
+                        'Cancelled' +
+
+                        '</span>';
+
+                }
+
+
+                const row =
+
+                    '<tr>' +
+
+                    '<td>' +
+                    '<strong>#' +
+                    reservation.bookingId +
+                    '</strong>' +
+                    '</td>' +
+
+                    '<td>' +
+                    getCustomerName(reservation) +
+                    '</td>' +
+
+                    '<td>' +
+                    getRoomNumber(reservation) +
+                    '</td>' +
+
+                    '<td>' +
+                    (reservation.checkIn || "-") +
+                    '</td>' +
+
+                    '<td>' +
+                    (reservation.checkOut || "-") +
+                    '</td>' +
+
+                    '<td>' +
+                    (reservation.guests || "-") +
+                    '</td>' +
+
+                    '<td>$' +
+                    (reservation.totalAmount || "0.00") +
+                    '</td>' +
+
+                    '<td>' +
+                    getStatusBadge(status) +
+                    '</td>' +
+
+                    '<td>' +
+                    actionHtml +
+                    '</td>' +
+
+                    '</tr>';
+
+
+                tableBody.insertAdjacentHTML(
+                    "beforeend",
+                    row
+                );
+
+            });
+
+        })
+
+        .catch(error => {
+
+            console.error(error);
+
+            document.getElementById(
+                "reservationTableBody"
+            ).innerHTML =
+
+                '<tr>' +
+
+                '<td colspan="9" ' +
+                'class="text-center text-danger py-5">' +
+
+                '<i class="bi bi-exclamation-triangle display-5"></i>' +
+
+                '<div class="mt-3">' +
+                'Failed to load reservations.' +
+                '</div>' +
+
+                '</td>' +
+
+                '</tr>';
+
+        });
+
+    }
+
+
+    function confirmReservation(bookingId) {
+
+        if (!confirm(
+            "Are you sure you want to confirm booking #"
+            + bookingId
+            + "?"
+        )) {
+
+            return;
+
+        }
+
+
+        const token = getToken();
+
+
+        fetch(
+            contextPath +
+            "/api/reservations/" +
+            bookingId +
+            "/confirm",
+            {
+                method: "POST",
+
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Content-Type": "application/json"
+                }
+            }
+        )
+
+        .then(response => {
+
+            if (!response.ok) {
+
+                return response.text()
+                    .then(text => {
+
+                        throw new Error(
+                            "HTTP " +
+                            response.status +
+                            ": " +
+                            text
+                        );
+
+                    });
+
+            }
+
+            return response.json();
+
+        })
+
+        .then(result => {
+
+            showAlert(
+                "Booking #" +
+                bookingId +
+                " confirmed successfully!",
+                "success"
+            );
+
+            loadReservations();
+
+        })
+
+        .catch(error => {
+
+            console.error(error);
+
+            showAlert(
+                "Failed to confirm booking: " +
+                error.message,
+                "danger"
+            );
+
+        });
+
+    }
+
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+
+            loadReservations();
+
+        }
+    );
+
 </script>
+
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+</script>
+
+</body>
+
+</html>
+

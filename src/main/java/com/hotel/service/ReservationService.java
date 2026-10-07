@@ -185,4 +185,44 @@ public class ReservationService {
 
         cancelReservation(bookingId, customer.getCustId());
     }
-}
+
+
+
+	 // =====================================================
+	 // CONFIRM RESERVATION
+	 // =====================================================
+	 @Transactional
+	 public Reservation confirmReservation(Integer id) {
+	
+	     if (id == null) {
+	         throw new IllegalArgumentException(
+	                 "Booking ID ត្រូវតែមាន!"
+	         );
+	     }
+	
+	     Reservation reservation = reservationRepository.findById(id)
+	             .orElseThrow(() ->
+	                     new IllegalArgumentException(
+	                             "រកមិនឃើញការកក់បន្ទប់ដែលមាន ID: " + id
+	                     )
+	             );
+	
+	     if ("CANCELLED".equalsIgnoreCase(reservation.getStatus())) {
+	         throw new IllegalArgumentException(
+	                 "មិនអាចបញ្ជាក់ការកក់ដែលបានបោះបង់រួចហើយឡើយ!"
+	         );
+	     }
+	
+	     if ("CONFIRMED".equalsIgnoreCase(reservation.getStatus())) {
+	         throw new IllegalArgumentException(
+	                 "ការកក់នេះត្រូវបានបញ្ជាក់រួចហើយ!"
+	         );
+	     }
+	
+	     reservation.setStatus("CONFIRMED");
+	
+	     return reservationRepository.save(reservation);
+	 }
+	}
+	
+	
